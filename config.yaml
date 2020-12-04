@@ -1,0 +1,45 @@
+
+output_database: "tcga.sqlite"
+
+timestamp: "2016_01_28" # This is the most recent timestamp
+
+cancer_types: ["ACC", "CESC", "COADREAD", #"FPPP", 
+               "HNSC", 
+               "KIRC", "LGG", "LUSC", "PAAD", "READ", "STAD", 
+               "THCA", "UCS", "BLCA", "CHOL", "DLBC", "GBM", 
+               "KICH", "KIRP", "LIHC", "MESO", "PCPG", "SARC", 
+               "STES", "THYM", "UVM", "BRCA", "COAD", "ESCA", 
+               "GBMLGG", "KIPAN", "LAML", "LUAD", "OV", "PRAD", 
+               "SKCM", "TGCT", "UCEC"]
+
+
+# These flags identify nodes in the 
+# Broad Firehose data processing DAG:
+# http://gdac.broadinstitute.org/stddata-DAG.html
+data_types:
+    Clinical_Pick_Tier1:          # Clinical data
+        zip_template: "Clinical_Pick_Tier1.Level_4"
+        file_template: "clin.merged.picked.txt"
+    Methylation_Preprocess:       # Methylation data
+        zip_template: "Methylation_Preprocess.Level_3"
+        file_template: "meth.by_mean.data.txt"
+    mRNAseq_Preprocess:           # mRNA-seq data
+        zip_template: "mRNAseq_Preprocess.Level_3"
+        file_template: "uncv2.mRNAseq_RSEM_normalized_log2.txt"
+    miRseq_Mature_Preprocess:     # mature miRNA data
+        zip_template: "miRseq_Mature_Preprocess.Level_3"
+        file_template: "miRseq_mature_RPM_log2.txt" 
+    miRseq_Preprocess:            # miRNA data
+        zip_template: "miRseq_Preprocess.Level_3"
+        file_template: "miRseq_RPKM_log2.txt" 
+    RPPA_AnnotateWithGene:        # RPPA proteomic data
+        zip_template: "RPPA_AnnotateWithGene.Level_3"
+        file_template: "rppa.txt"
+    scna_minus_germline_cnv_hg19: # CNA data (with "noise" from germline CNVs removed)
+        zip_template: "Merge_snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.Level_3"
+        file_template: "snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.seg.txt"
+
+
+exceptions:
+    LAML: ["RPPA_AnnotateWithGene", "miRseq_Mature_Preprocess"]
+
