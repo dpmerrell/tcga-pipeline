@@ -20,17 +20,17 @@ FNAME_DECODER = {templates["file_template"]: k for k, templates in DATA_TYPE_DIC
 print(ZIPNAME_DECODER)
 
 FIREHOSE_GET_URL = "http://gdac.broadinstitute.org/runs/code/firehose_get_latest.zip"
-FIREHOSE_DOWNLOAD_DIR = os.path.join(PWD,"stddata__{}".format(TIMESTAMP)) 
 
 LOG_DIR = os.path.join(PWD, "logs")
 
-DATA_FILES = {ctype:{dtype: os.path.join(FIREHOSE_DOWNLOAD_DIR,
-	                         ctype, 
-				 TIMESTAMP_ABBR,
-                                 ".".join(["gdac.broadinstitute.org_"+ ctype,
-					  DATA_TYPE_DICT[dtype]["zip_template"],
-					  TIMESTAMP_ABBR+"00.0.0"]),
-				 ctype+"."+DATA_TYPE_DICT[dtype]["file_template"]
+def fill_template(template, ct):
+    return template.format(cancer_type=ct,
+		           timestamp=TIMESTAMP,
+			   timestamp_abbr=TIMESTAMP_ABBR)
+
+
+DATA_FILES = {ctype:{dtype: os.path.join(fill_template(DATA_TYPE_DICT[dtype]["zip_template"],ctype),
+				         fill_template(DATA_TYPE_DICT[dtype]["file_template"],ctype)
 	                        )\
 		    for dtype in DATA_TYPES\
 		    if (ctype not in DATA_EXCEPTIONS.keys() or dtype not in DATA_EXCEPTIONS[ctype])}\
@@ -41,21 +41,19 @@ print(DATA_FILES)
 
 rule all:
     input: 
-        [os.path.join(LOG_DIR, ct+"."+DATA_TYPE_DICT[dt]["file_template"]+".log")\
-			for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()]
-
-    #input: [DATA_FILES[ct][dt] for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()]
+        [os.path.join(LOG_DIR, ct+"."+dt+".log")\
+            for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()]
+        
+#    input:
+#        [DATA_FILES[ct][dt] for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()],
+#	DB_FILENAME
 
 rule add_data_to_db:
     input:
         db=DB_FILENAME,
-	data_file=lambda w: os.path.join(FIREHOSE_DOWNLOAD_DIR,w["cancer_type"], TIMESTAMP_ABBR,
-			    "gdac.broadinstitute.org_"+w["cancer_type"]+"."+\
-		            DATA_TYPE_DICT[FNAME_DECODER[w["file_template"]]]["zip_template"]\
-			        +"."+TIMESTAMP_ABBR+"00.0.0",
-		            w["cancer_type"]+"."+w["file_template"])
+	data_file=lambda w: DATA_FILES[w["cancer_type"]][w["data_type"]]
     output:
-        os.path.join(LOG_DIR, "{cancer_type,[A-Z]+}.{file_template}.log")
+        os.path.join(LOG_DIR, "{cancer_type,[A-Z]+}.{data_type}.log")
     group: "add_data"
     shell:
         "python add_data_script.py {input.db} {input.data_file}"
@@ -65,35 +63,43 @@ rule initialize_db:
     output:
         DB_FILENAME
     shell:
-        "python db_init_script.py --output {output} --data-types {DATA_TYPES} --cancer-types {CANCER_TYPES}"
+        "python db_init_script.py {output} --table_names {DATA_TYPES}"
 
 
 rule unzip_data:
     input:
-        os.path.join(FIREHOSE_DOWNLOAD_DIR,"{cancer_type}", TIMESTAMP_ABBR,
-		     "gdac.broadinstitute.org_{cancer_type}.{zip_template}.{TIMESTAMP_ABBR}00.0.0.tar.gz")
-    params:
-        zip_dir=os.path.join(FIREHOSE_DOWNLOAD_DIR,"{cancer_type}", TIMESTAMP_ABBR)
+        os.path.join("{run_type}__{TIMESTAMP}","{cancer_type}", TIMESTAMP_ABBR,
+		     "{zip_dir}.tar.gz")
     output:
-        os.path.join(FIREHOSE_DOWNLOAD_DIR,"{cancer_type}", TIMESTAMP_ABBR,
-		     "gdac.broadinstitute.org_{cancer_type}.{zip_template}.{TIMESTAMP_ABBR}00.0.0",
-		     "{cancer_type}.{file_template}")
+        os.path.join("{run_type}__{TIMESTAMP}","{cancer_type}", TIMESTAMP_ABBR,
+		     "{zip_dir}",
+		     "{output_file}.txt")
     group: "add_data"
     shell:
-        "tar -xvzf {input} --directory {params.zip_dir}"
+        "tar -xvzf {input} --directory {wildcards.run_type}__{TIMESTAMP}/{wildcards.cancer_type}/{TIMESTAMP_ABBR}/"
 
 
 rule download_data:
     input:
         "firehose_get"
-    params:
-        data_type=lambda w: ZIPNAME_DECODER[w["zip_template"]]
     output:
-        os.path.join(FIREHOSE_DOWNLOAD_DIR,
+        os.path.join("{run_type}__{TIMESTAMP}",
 	             "{cancer_type}", TIMESTAMP_ABBR,
-                     "gdac.broadinstitute.org_{cancer_type}.{zip_template}.{TIMESTAMP_ABBR}00.0.0.tar.gz")
+                     "gdac.broadinstitute.org_{cancer_type}.{data_type}.Level_{data_level,[0-9]}.{TIMESTAMP_ABBR}00.0.0.tar.gz")
     shell:
-        "./{input} -b -tasks {params.data_type} stddata {TIMESTAMP} {wildcards.cancer_type}"
+        "./{input} -b -tasks {wildcards.data_type} {wildcards.run_type} {TIMESTAMP} {wildcards.cancer_type}"
+
+# The CNA data is a little different from the others.
+# We'll give it its own rule just for convenience.
+rule download_cna:
+    input:
+        "firehose_get"
+    output:
+        os.path.join("analyses__"+TIMESTAMP,
+	             "{cancer_type}", TIMESTAMP_ABBR,
+                     "gdac.broadinstitute.org_{cancer_type}-TP.CopyNumber_Gistic2.Level_4.{TIMESTAMP_ABBR}00.0.0.tar.gz")
+    shell:
+        "./{input} -b -tasks CopyNumber_Gistic2 analyses {TIMESTAMP} {wildcards.cancer_type}"
 
 
 rule unzip_firehose_get:

@@ -18,26 +18,33 @@ cancer_types: ["ACC", "CESC", "COADREAD", #"FPPP",
 # http://gdac.broadinstitute.org/stddata-DAG.html
 data_types:
     Clinical_Pick_Tier1:          # Clinical data
-        zip_template: "Clinical_Pick_Tier1.Level_4"
-        file_template: "clin.merged.picked.txt"
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Clinical_Pick_Tier1.Level_4.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.clin.merged.picked.txt"
     Methylation_Preprocess:       # Methylation data
-        zip_template: "Methylation_Preprocess.Level_3"
-        file_template: "meth.by_mean.data.txt"
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Methylation_Preprocess.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.meth.by_mean.data.txt"
     mRNAseq_Preprocess:           # mRNA-seq data
-        zip_template: "mRNAseq_Preprocess.Level_3"
-        file_template: "uncv2.mRNAseq_RSEM_normalized_log2.txt"
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.mRNAseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.uncv2.mRNAseq_RSEM_normalized_log2.txt"
     miRseq_Mature_Preprocess:     # mature miRNA data
-        zip_template: "miRseq_Mature_Preprocess.Level_3"
-        file_template: "miRseq_mature_RPM_log2.txt" 
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.miRseq_Mature_Preprocess.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.miRseq_mature_RPM_log2.txt" 
     miRseq_Preprocess:            # miRNA data
-        zip_template: "miRseq_Preprocess.Level_3"
-        file_template: "miRseq_RPKM_log2.txt" 
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.miRseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.miRseq_RPKM_log2.txt" 
     RPPA_AnnotateWithGene:        # RPPA proteomic data
-        zip_template: "RPPA_AnnotateWithGene.Level_3"
-        file_template: "rppa.txt"
-    scna_minus_germline_cnv_hg19: # CNA data (with "noise" from germline CNVs removed)
-        zip_template: "Merge_snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.Level_3"
-        file_template: "snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.seg.txt"
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.RPPA_AnnotateWithGene.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.rppa.txt"
+    CopyNumber_Gistic2: # CNA data (with "noise" from germline CNVs removed)
+        run_type: "analyses"
+        zip_template: "analyses__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}-TP.CopyNumber_Gistic2.Level_4.{timestamp_abbr}00.0.0"
+        file_template: "all_data_by_genes.txt"
 
 
 exceptions:
