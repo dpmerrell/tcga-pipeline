@@ -13,7 +13,7 @@ DB_FILENAME = config["output_database"]
 
 CANCER_TYPES = config["cancer_types"]
 DATA_TYPE_DICT = config["data_types"]
-DATA_TYPES = DATA_TYPE_DICT.keys()
+DATA_TYPES = list(DATA_TYPE_DICT.keys())
 DATA_EXCEPTIONS = config["exceptions"]
 ZIPNAME_DECODER = {templates["zip_template"]: k for k, templates in DATA_TYPE_DICT.items()}
 FNAME_DECODER = {templates["file_template"]: k for k, templates in DATA_TYPE_DICT.items()}
@@ -40,13 +40,11 @@ print(DATA_FILES)
 
 
 rule all:
-    input: 
-        [os.path.join(LOG_DIR, ct+"."+dt+".log")\
-            for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()]
-        
-#    input:
-#        [DATA_FILES[ct][dt] for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()],
-#	DB_FILENAME
+	#input: 
+    	#    [os.path.join(LOG_DIR, ct+"."+dt+".log")\
+    	#        for ct in DATA_FILES.keys() for dt in DATA_FILES[ct].keys()]
+    input:
+        DB_FILENAME
 
 rule add_data_to_db:
     input:
