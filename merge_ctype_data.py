@@ -2,16 +2,27 @@
 # creates one big dataframe from them;
 # and dumps them into a HDF file
 
-import pandas
+import pandas as pd
 import argparse
 import h5py
 
-def standardize_gene_id(gene_id):
+
+def standardize_gene_id(gene_id, suffix):
 
     std_id = gene_id.split("|")[0]
     std_id = std_id.upper()
+    std_id += suffix
 
     return std_id
+
+
+def standardize_antibody_id(ab_id, suffix):
+    gene_ab = ab_id.split("|")
+    std_gene = gene_ab[0].upper()
+    std_ab = gene_ab[1].upper()
+    std_ab = std_ab.replace("_","-")
+
+    return std_gene + suffix + "_" + std_ab
 
 
 def standardize_patient_id(patient_id):
@@ -20,10 +31,12 @@ def standardize_patient_id(patient_id):
     std_id = "-".join(std_id.split("-")[:3])
     return std_id
 
-
+"""
+Discard IDs that don't seem to be valid
+"""
 def is_valid_gene_id(gene_id):
-    return gene_id.isalnum()
-
+    return ("?" not in gene_id)
+        
 
 def read_mRNAseq_data(data_filename):
 
@@ -31,7 +44,8 @@ def read_mRNAseq_data(data_filename):
 
     # standardize the gene IDs 
     df = pd.read_csv(data_filename, sep="\t")
-    df.loc[:,gene_col] = df[gene_col].map(standardize_gene_id)
+    sgi_func = lambda x: standardize_gene_id(x, "_MRNA_SEQ")
+    df.loc[:,gene_col] = df[gene_col].map(sgi_func)
 
     # Discard the unidentified genes
     df = df.loc[df[gene_col].map(is_valid_gene_id),:]
@@ -43,6 +57,60 @@ def read_mRNAseq_data(data_filename):
     df.columns = df.columns.map(standardize_patient_id)
     df = df.transpose()
 
+    df.index.rename("patient", inplace=True)
+
+    # group by patient; take the mean over replicates
+    df = df.groupby("patient").mean() 
+
+    return df
+
+
+def read_RPPA_data(data_filename):
+
+    gene_col = "Composite.Element.REF"
+
+    # standardize the gene/antibody IDs 
+    df = pd.read_csv(data_filename, sep="\t")
+    sgi_func = lambda x: standardize_antibody_id(x, "_PROT_RPPA")
+    df.loc[:,gene_col] = df[gene_col].map(sgi_func)
+
+    # Discard any unidentified genes
+    df = df.loc[df[gene_col].map(is_valid_gene_id),:]
+    
+    # index the df by gene
+    df.set_index(gene_col, inplace=True)
+
+    # standardize the patient IDs, then transpose the df
+    df.columns = df.columns.map(standardize_patient_id)
+    df = df.transpose()
+    df.index.rename("patient", inplace=True)
+
+    return df
+
+
+def read_Methylation_data(data_filename):
+    gene_col = "Hybridization REF"
+
+    # standardize the gene IDs 
+    df = pd.read_csv(data_filename, sep="\t")
+
+    # discard the "Composite Element REF" row
+    df.drop(index=1, inplace=True)
+
+    sgi_func = lambda x: standardize_gene_id(x, "_METH")
+    df.loc[:,gene_col] = df[gene_col].map(sgi_func)
+
+    # Discard the unidentified genes
+    df = df.loc[df[gene_col].map(is_valid_gene_id),:]
+    
+    # index the df by gene
+    df.set_index(gene_col, inplace=True)
+
+    # standardize the patient IDs, then transpose the df
+    df.columns = df.columns.map(standardize_patient_id)
+    df = df.transpose()
+    df.index.rename("patient", inplace=True)
+
     return df
 
 
@@ -50,6 +118,10 @@ def read_data(data_filename, data_type_str):
 
     if data_type_str=="mRNAseq_Preprocess":
         df = read_mRNAseq_data(data_filename)
+    elif data_type_str == "RPPA_AnnotateWithGene":
+        df = read_RPPA_data(data_filename)
+    elif data_type_str == "Methylation_Preprocess":
+        df = read_Methylation_data(data_filename)
 
     return df
 
@@ -58,12 +130,22 @@ def read_all_data(all_data_files, all_data_types):
 
     combined = pd.DataFrame()
 
-    for i, data_file in enumerate(data_files):
-        data_type = data_types[i]
+    for i, data_file in enumerate(all_data_files):
+        data_type = all_data_types[i]
         
+        print("DATA FILE:", data_file)
+        print("DATA TYPE:", data_type)
+
         new_df = read_data(data_file, data_type)
+        print("COMBINED DATA:")
+        print(combined)
+
+        print("NEW DATA:")
+        print(new_df.index)
+        print(new_df.index.unique())
         combined = pd.concat((combined, new_df), axis=1)
 
+    print(combined)
     return combined
 
 
