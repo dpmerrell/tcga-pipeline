@@ -1,5 +1,5 @@
-# tcga-database
-Downloads TCGA data and puts it into a nice relational database.
+# tcga-pipeline
+Downloads TCGA data and stores it in a convenient HDF file.
 
 ## The Cancer Genome Atlas ([TCGA](https://www.cancer.gov/about-nci/organization/ccg/research/structural-genomics/tcga))
 
@@ -7,10 +7,10 @@ Downloads TCGA data and puts it into a nice relational database.
 * It is a really compelling dataset for supervised or unsupervised machine learning tasks.
 * You can access TCGA data via [FireBrowse](http://firebrowse.org/) or the [`firehose_get`](https://broadinstitute.atlassian.net/wiki/spaces/GDAC/pages/844333139/Download) command line tool.
 * Unfortunately, these tools (FireBrowse/Firehose) are inconvenient for the uninitiated. 
-    - Unless you have a lot of bioinformatics background knowledge, it can be very difficult to understand which data you should actually download.
+    - Unless you have a lot of bioinformatics background knowledge, it can be difficult to understand which data you should actually download.
     - Once you've downloaded the data, it exists as several GB of zipped text files with long, complicated names.
 
-This repository contains a complete workflow for (i) downloading TCGA data and (ii) putting it into a nice SQLite database with a sensible structure.
+This repository contains a complete workflow for (i) downloading useful kinds of TCGA data and (ii) storing it in a sensible format -- an HDF file.
 
 ## Setup and execution
 

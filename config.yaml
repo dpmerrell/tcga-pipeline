@@ -1,5 +1,5 @@
 
-output_database: "tcga.sqlite"
+output_hdf: "tcga.hdf"
 
 timestamp: "2016_01_28" # This is the most recent timestamp
 
