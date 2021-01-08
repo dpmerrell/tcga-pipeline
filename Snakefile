@@ -13,12 +13,9 @@ CANCER_TYPES = config["cancer_types"]
 DATA_TYPE_DICT = config["data_types"]
 DATA_TYPES = list(DATA_TYPE_DICT.keys())
 DATA_EXCEPTIONS = config["exceptions"]
-#ZIPNAME_DECODER = {templates["zip_template"]: k for k, templates in DATA_TYPE_DICT.items()}
-#FNAME_DECODER = {templates["file_template"]: k for k, templates in DATA_TYPE_DICT.items()}
-#print(ZIPNAME_DECODER)
 
-FIREHOSE_GET_URL = "http://gdac.broadinstitute.org/runs/code/firehose_get_latest.zip"
 
+FINAL_RESULT = config["output_hdf"]
 
 def fill_template(template, ct):
     return template.format(cancer_type=ct,
@@ -38,7 +35,35 @@ print(DATA_FILES)
 
 rule all:
     input:
-        [v for d in DATA_FILES.values() for k,v in d.items()] 
+        FINAL_RESULT 
+
+rule merge_all_data:
+    input:
+        expand("temp_hdf/{cancer_type}.hdf", cancer_type=CANCER_TYPES)
+    output:
+        FINAL_RESULT 
+    shell:
+        "python merge_all_data.py --hdf-path-list {input} --group-name-list {CANCER_TYPES} --output {output}"
+
+
+
+def get_data_files(wc):
+    srt_keys = sorted(list(DATA_FILES[wc['cancer_type']].keys()))
+    return [DATA_FILES[wc['cancer_type']][k] for k in srt_keys]
+
+def get_data_types(wc):
+    return sorted(list(DATA_FILES[wc['cancer_type']].keys()))
+
+rule merge_ctype_data:
+    input:
+        data_files=get_data_files
+    output:
+        "temp_hdf/{cancer_type}.hdf"
+    params:
+        data_types=get_data_types
+    shell:
+        "python merge_ctype_data.py {output} --csv-files {input} --data-types {params.data_types}"
+
 
 
 rule unzip_data:
@@ -51,6 +76,7 @@ rule unzip_data:
 		     "{output_file}.txt")
     shell:
         "tar -xvzf {input} --directory {wildcards.run_type}__{TIMESTAMP}/{wildcards.cancer_type}/{TIMESTAMP_ABBR}/"
+
 
 
 rule download_data:
@@ -74,6 +100,7 @@ rule download_cna_data:
                      "gdac.broadinstitute.org_{cancer_type}-TP.CopyNumber_Gistic2.Level_4.{TIMESTAMP_ABBR}00.0.0.tar.gz")
     shell:
         "./{input} -b -tasks CopyNumber_Gistic2 analyses {TIMESTAMP} {wildcards.cancer_type}"
+
 
 
 rule unzip_firehose_get:

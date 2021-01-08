@@ -85,6 +85,7 @@ def read_RPPA_data(data_filename):
     df = df.transpose()
     df.index.rename("patient", inplace=True)
 
+    df = df.groupby("patient").mean() 
     return df
 
 
@@ -92,10 +93,7 @@ def read_Methylation_data(data_filename):
     gene_col = "Hybridization REF"
 
     # standardize the gene IDs 
-    df = pd.read_csv(data_filename, sep="\t")
-
-    # discard the "Composite Element REF" row
-    df.drop(index=1, inplace=True)
+    df = pd.read_csv(data_filename, sep="\t", skiprows=[1])
 
     sgi_func = lambda x: standardize_gene_id(x, "_METH")
     df.loc[:,gene_col] = df[gene_col].map(sgi_func)
@@ -111,6 +109,10 @@ def read_Methylation_data(data_filename):
     df = df.transpose()
     df.index.rename("patient", inplace=True)
 
+    print("METHYLATION DATAFRAME")
+    print(df)
+    print(df.dtypes)
+    df = df.groupby("patient").mean() 
     return df
 
 
@@ -122,6 +124,8 @@ def read_data(data_filename, data_type_str):
         df = read_RPPA_data(data_filename)
     elif data_type_str == "Methylation_Preprocess":
         df = read_Methylation_data(data_filename)
+    else:
+        raise ValueError
 
     return df
 
