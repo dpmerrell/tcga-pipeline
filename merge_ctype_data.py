@@ -116,6 +116,32 @@ def read_Methylation_data(data_filename):
     return df
 
 
+def read_CopyNumber_data(data_filename):
+    gene_col = "Gene Symbol"
+
+    # standardize the gene IDs 
+    df = pd.read_csv(data_filename, sep="\t")
+    sgi_func = lambda x: standardize_gene_id(x, "_CNV")
+    df.loc[:,gene_col] = df[gene_col].map(sgi_func)
+
+    # Discard some extra columns
+    df.drop(labels=["Locus ID", "Cytoband"], axis='columns', inplace=True)
+
+    # Discard the unidentified genes
+    df = df.loc[df[gene_col].map(is_valid_gene_id),:]
+
+    # Eliminate some redundant gene measurements by taking averages
+    df = df.groupby(gene_col).mean()   
+    print(df) 
+
+    # standardize the patient IDs, then transpose the df
+    df.columns = df.columns.map(standardize_patient_id)
+    df = df.transpose()
+    df.index.rename("patient", inplace=True)
+    df = df.groupby("patient").mean() 
+    return df
+
+
 def read_data(data_filename, data_type_str):
 
     if data_type_str=="mRNAseq_Preprocess":
@@ -124,6 +150,8 @@ def read_data(data_filename, data_type_str):
         df = read_RPPA_data(data_filename)
     elif data_type_str == "Methylation_Preprocess":
         df = read_Methylation_data(data_filename)
+    elif data_type_str == "CopyNumber_Gistic2":
+        df = read_CopyNumber_data(data_filename)
     else:
         raise ValueError
 

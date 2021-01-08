@@ -58,7 +58,7 @@ rule merge_ctype_data:
     input:
         data_files=get_data_files
     output:
-        "temp_hdf/{cancer_type}.hdf"
+        temp("temp_hdf/{cancer_type}.hdf")
     params:
         data_types=get_data_types
     shell:
