@@ -1,0 +1,5 @@
+firehose_get
+analyses__*/
+stddata__*/
+*.hdf
+.snakemake/
