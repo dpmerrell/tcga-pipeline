@@ -37,14 +37,14 @@ Each cancer type has its own group in the HDF file.
 For each cancer type group, there are two tables:
 
 * `/CANCERTYPE/data`. The table of multi-omic numeric values. Floating point dtype.
-* `/CANCERTYPE/columns'. The list of patients. corresponds to columns in `data`. UTF-8 string dtype.
+* `/CANCERTYPE/columns`. The list of patients. corresponds to columns in `data`. UTF-8 string dtype.
 
 There is also a root-level table `/index` that gives the names of the multi-omic features.
 Feature names take the following convention:
 
-`GENE-NAME_DATA-TYPE_OTHER-IDENTIFIERS`
+`GENE_DATATYPE_OTHER-IDENTIFIERS`
 
-Possible values for `DATA-TYPE` include `CNV`, `METH`, `MRNA`, `PROT`.
+Possible values for `DATATYPE` include `CNV`, `METH`, `MRNA`, `PROT`.
  
 There are many missing values -- not all measurements were taken for all patients.
 
@@ -63,7 +63,7 @@ For each cancer type there are three tables:
 
 We download data from particular points in the [Broad Intitute GDAC Firehose pipeline](https://broadinstitute.atlassian.net/wiki/spaces/GDAC/pages/844333681/Rationale). 
 
-* Copy number alteration
+* Copy number variation
     - `CopyNumber_Gistic2` node in [this DAG](http://gdac.broadinstitute.org/Analyses-DAG.html)
 * Methylation
     - `Methylation_Preprocess` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
@@ -76,8 +76,8 @@ We download data from particular points in the [Broad Intitute GDAC Firehose pip
 
 (c) David Merrell 2021
 
-This software in this repository is distributed with an MIT license. See `LICENSE.txt` for details.
+The software in this repository is distributed under an MIT license. See `LICENSE.txt` for details.
 
-Please note: downloading data from the BROAD TCGA GDAC site constitutes agreement to the TCGA Data Usage Policy: 
+Note: downloading data from the BROAD TCGA GDAC site constitutes agreement to the TCGA Data Usage Policy: 
 
 https://broadinstitute.atlassian.net/wiki/spaces/GDAC/pages/844333156/Data+Usage+Policy
