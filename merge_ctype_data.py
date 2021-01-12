@@ -109,9 +109,6 @@ def read_Methylation_data(data_filename):
     df = df.transpose()
     df.index.rename("patient", inplace=True)
 
-    print("METHYLATION DATAFRAME")
-    print(df)
-    print(df.dtypes)
     df = df.groupby("patient").mean() 
     return df
 
@@ -164,17 +161,7 @@ def read_all_data(all_data_files, all_data_types):
 
     for i, data_file in enumerate(all_data_files):
         data_type = all_data_types[i]
-        
-        print("DATA FILE:", data_file)
-        print("DATA TYPE:", data_type)
-
         new_df = read_data(data_file, data_type)
-        print("COMBINED DATA:")
-        print(combined)
-
-        print("NEW DATA:")
-        print(new_df.index)
-        print(new_df.index.unique())
         combined = pd.concat((combined, new_df), axis=1)
 
     print(combined)

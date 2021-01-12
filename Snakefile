@@ -10,12 +10,15 @@ TIMESTAMP = config["timestamp"]
 TIMESTAMP_ABBR = "".join(TIMESTAMP.split("_"))
 
 CANCER_TYPES = config["cancer_types"]
-DATA_TYPE_DICT = config["data_types"]
-DATA_TYPES = list(DATA_TYPE_DICT.keys())
-DATA_EXCEPTIONS = config["exceptions"]
+OMIC_DICT = config["data_types"]
+OMIC_TYPES = list(OMIC_DICT.keys())
+MISSING_FILES = config["missing_files"]
+EXTRA_FILES = config["extra_files"]
 
+CLINICAL_DICT = config['clinical_data_types']['Clinical_Pick_Tier1']
 
-FINAL_RESULT = config["output_hdf"]
+OMIC_HDF = config["omic_hdf"]
+CLINICAL_HDF = config["clinical_hdf"]
 
 def fill_template(template, ct):
     return template.format(cancer_type=ct,
@@ -23,36 +26,56 @@ def fill_template(template, ct):
 			   timestamp_abbr=TIMESTAMP_ABBR)
 
 
-DATA_FILES = {ctype:{dtype: os.path.join(fill_template(DATA_TYPE_DICT[dtype]["zip_template"],ctype),
-				         fill_template(DATA_TYPE_DICT[dtype]["file_template"],ctype)
+# Build a dictionary containing the names of all of the
+# omic data CSV files we need to download
+OMIC_CSVS = {ctype:{dtype: os.path.join(fill_template(OMIC_DICT[dtype]["zip_template"],ctype),
+				        fill_template(OMIC_DICT[dtype]["file_template"],ctype)
 	                        )\
-		    for dtype in DATA_TYPES\
-		    if (ctype not in DATA_EXCEPTIONS.keys() or dtype not in DATA_EXCEPTIONS[ctype])}\
+		    for dtype in OMIC_TYPES\
+		    if (ctype not in MISSING_FILES.keys() or dtype not in MISSING_FILES[ctype])}\
              for ctype in CANCER_TYPES\
 	         }
-print(DATA_FILES)
 
+# Add the files with nonstandard names
+for ctype, d in EXTRA_FILES.items():
+    for dtype, fname in d.items():
+        OMIC_CSVS[ctype][dtype] = fill_template(fname, ctype)
+
+# Build a list of all the clinical data
+# CSV files we need to download
+CLINICAL_CSVS = [os.path.join(fill_template(CLINICAL_DICT['zip_template'], ct),
+	                       fill_template(CLINICAL_DICT['file_template'], ct)) for ct in CANCER_TYPES]
 
 rule all:
     input:
-        FINAL_RESULT 
+        OMIC_HDF,
+        CLINICAL_HDF
 
-rule merge_all_data:
+
+rule merge_all_omic_data:
     input:
         expand("temp_hdf/{cancer_type}.hdf", cancer_type=CANCER_TYPES)
     output:
-        FINAL_RESULT 
+        OMIC_HDF
     shell:
         "python merge_all_data.py --hdf-path-list {input} --group-name-list {CANCER_TYPES} --output {output}"
 
 
+rule merge_clinical_data:
+    input:
+        CLINICAL_CSVS
+    output:
+        CLINICAL_HDF
+    shell:
+        "python merge_clinical_data.py {output} --csv-files {input} --cancer-types {CANCER_TYPES}"
+
 
 def get_data_files(wc):
-    srt_keys = sorted(list(DATA_FILES[wc['cancer_type']].keys()))
-    return [DATA_FILES[wc['cancer_type']][k] for k in srt_keys]
+    srt_keys = sorted(list(OMIC_CSVS[wc['cancer_type']].keys()))
+    return [OMIC_CSVS[wc['cancer_type']][k] for k in srt_keys]
 
 def get_data_types(wc):
-    return sorted(list(DATA_FILES[wc['cancer_type']].keys()))
+    return sorted(list(OMIC_CSVS[wc['cancer_type']].keys()))
 
 rule merge_ctype_data:
     input:
@@ -69,10 +92,10 @@ rule merge_ctype_data:
 rule unzip_data:
     input:
         os.path.join("{run_type}__{TIMESTAMP}","{cancer_type}", TIMESTAMP_ABBR,
-		     "{zip_dir}.tar.gz")
+		     "{zip_dir}."+TIMESTAMP_ABBR+"00.0.0.tar.gz")
     output:
         os.path.join("{run_type}__{TIMESTAMP}","{cancer_type}", TIMESTAMP_ABBR,
-		     "{zip_dir}",
+		     "{zip_dir}.{other_timestamp,[0-9]+}00.0.0",
 		     "{output_file}.txt")
     shell:
         "tar -xvzf {input} --directory {wildcards.run_type}__{TIMESTAMP}/{wildcards.cancer_type}/{TIMESTAMP_ABBR}/"
