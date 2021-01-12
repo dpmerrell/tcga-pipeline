@@ -62,6 +62,10 @@ def read_mRNAseq_data(data_filename):
     # group by patient; take the mean over replicates
     df = df.groupby("patient").mean() 
 
+    # transpose the df (again...)
+    df = df.transpose()
+    srt_cols = sorted(df.columns)
+    df = df[srt_cols]
     return df
 
 
@@ -86,6 +90,11 @@ def read_RPPA_data(data_filename):
     df.index.rename("patient", inplace=True)
 
     df = df.groupby("patient").mean() 
+
+    df = df.transpose()
+    srt_cols = sorted(df.columns)
+    df = df[srt_cols]
+
     return df
 
 
@@ -109,7 +118,11 @@ def read_Methylation_data(data_filename):
     df = df.transpose()
     df.index.rename("patient", inplace=True)
 
-    df = df.groupby("patient").mean() 
+    df = df.groupby("patient").mean()
+
+    df = df.transpose() 
+    srt_cols = sorted(df.columns)
+    df = df[srt_cols]
     return df
 
 
@@ -129,13 +142,16 @@ def read_CopyNumber_data(data_filename):
 
     # Eliminate some redundant gene measurements by taking averages
     df = df.groupby(gene_col).mean()   
-    print(df) 
 
     # standardize the patient IDs, then transpose the df
     df.columns = df.columns.map(standardize_patient_id)
     df = df.transpose()
     df.index.rename("patient", inplace=True)
     df = df.groupby("patient").mean() 
+
+    df = df.transpose()
+    srt_cols = sorted(df.columns)
+    df = df[srt_cols]
     return df
 
 
@@ -162,9 +178,13 @@ def read_all_data(all_data_files, all_data_types):
     for i, data_file in enumerate(all_data_files):
         data_type = all_data_types[i]
         new_df = read_data(data_file, data_type)
-        combined = pd.concat((combined, new_df), axis=1)
+        print("NEW DF:")
+        print(new_df)
+        combined = pd.concat((combined, new_df))
+        print("COMBINED DF:")
+        print(combined)
 
-    print(combined)
+    #print(combined)
     return combined
 
 

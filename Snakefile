@@ -58,7 +58,7 @@ rule merge_all_omic_data:
     output:
         OMIC_HDF
     shell:
-        "python merge_all_data.py --hdf-path-list {input} --group-name-list {CANCER_TYPES} --output {output}"
+        "python merge_all_omic_data.py --hdf-path-list {input} --group-name-list {CANCER_TYPES} --output {output}"
 
 
 rule merge_clinical_data:
@@ -85,7 +85,7 @@ rule merge_ctype_data:
     params:
         data_types=get_data_types
     shell:
-        "python merge_ctype_data.py {output} --csv-files {input} --data-types {params.data_types}"
+        "python merge_ctype_omic_data.py {output} --csv-files {input} --data-types {params.data_types}"
 
 
 

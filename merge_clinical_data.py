@@ -20,11 +20,10 @@ def read_clinical_data(data_filename):
     # index the df by gene
     df.set_index(index_col, inplace=True)
 
-    # standardize the patient IDs, then transpose the df
+    # standardize the patient IDs and put the columns in sorted order
     df.columns = df.columns.map(standardize_patient_id)
-    df = df.transpose()
-
-    df.index.rename("patient", inplace=True)
+    srt_cols = sorted(df.columns)
+    df = df[srt_cols]
 
     return df
 

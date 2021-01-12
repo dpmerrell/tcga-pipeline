@@ -6,15 +6,19 @@ import h5py
 
 def build_dataframe(cols, rows, data, all_features):
 
-        df = pd.DataFrame(index=rows, columns=all_features, dtype=float)
+        df = pd.DataFrame(index=all_features, columns=cols, dtype=float)
 
         chunk_size = 1000
         lagging = 0
         leading = chunk_size
-        while leading < len(cols):
-           df.loc[rows, cols[lagging:leading]] = data[:,lagging:leading]
+        while leading < len(rows):
+           df.loc[rows[lagging:leading], cols] = data[lagging:leading,:]
            lagging = leading
-           leading = min(len(cols), leading + chunk_size)
+           leading = min(len(rows), leading + chunk_size)
+
+        # put the columns (i.e., patients) in sorted order
+        srt_cols = sorted(cols)
+        df = df[srt_cols]
 
         return df
 
@@ -24,7 +28,7 @@ def get_all_features(hdf_path_list):
     all_features = set([])
     for hdf_path in hdf_path_list:
         with h5py.File(hdf_path, "r") as f:
-            new_features = set(f['columns'])
+            new_features = set(f['index'])
             all_features |= new_features
 
     return sorted(list(all_features))
@@ -42,9 +46,9 @@ def add_dataset(input_path, group_name, all_features, out_f):
         dset = out_f.create_dataset(group_name + "/data", df.shape)
         dset[:,:] = df.values
 
-        rowset = out_f.create_dataset(group_name+"/index", df.index.shape,
+        colset = out_f.create_dataset(group_name+"/columns", df.columns.shape,
                                       dtype=h5py.string_dtype('utf-8'))
-        rowset[:] = df.index.values
+        colset[:] = df.columns.values
 
     return
 
@@ -55,9 +59,9 @@ def add_all_datasets(input_path_list, group_name_list, all_features, output_path
         for i, input_path in enumerate(input_path_list):
             add_dataset(input_path, group_name_list[i], all_features, out_f)
     
-        colset = out_f.create_dataset("columns", (len(all_features),),
+        rowset = out_f.create_dataset("index", (len(all_features),),
                                       dtype=h5py.string_dtype('utf-8'))
-        colset[:] = all_features
+        rowset[:] = all_features
 
     return
         
