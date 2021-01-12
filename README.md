@@ -1,5 +1,13 @@
 # tcga-pipeline
-Downloads TCGA data and stores it in convenient HDF files.
+Downloads TCGA data from the Broad Institute's GDAC Firehose pipeline and stores it in convenient HDF files.
+
+We've already done the hard work! Feel free to **download the HDF files directly from Zenodo:**
+
+https://doi.org/10.5281/zenodo.4434749
+
+* `tcga_omic.tar.gz`: multi-omic data (2.3GB)
+* `tcga_clinical.tar.gz`: clinical annotations (7.9MB)
+
 
 ## The Cancer Genome Atlas ([TCGA](https://www.cancer.gov/about-nci/organization/ccg/research/structural-genomics/tcga))
 
@@ -71,6 +79,8 @@ We download data from particular points in the [Broad Intitute GDAC Firehose pip
     - `mRNAseq_Preprocess` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
 * Reverse Phase Protein Array
     - `RPPA_AnnotateWithGene` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
+* Clinical Data
+    - `Clinical_Pick_Tier1` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
 
 ## Licensing/Legal stuff
 
