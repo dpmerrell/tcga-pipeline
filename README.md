@@ -3,7 +3,7 @@ Downloads TCGA data from the Broad Institute's GDAC Firehose pipeline and stores
 
 We've already done the hard work! Feel free to **download the HDF files directly from Zenodo:**
 
-https://doi.org/10.5281/zenodo.4434749
+https://zenodo.org/record/4434749
 
 * `tcga_omic.tar.gz`: multi-omic data (2.3GB)
 * `tcga_clinical.tar.gz`: clinical annotations (7.9MB)
