@@ -81,3 +81,8 @@ The software in this repository is distributed under an MIT license. See `LICENS
 Note: downloading data from the BROAD TCGA GDAC site constitutes agreement to the TCGA Data Usage Policy: 
 
 https://broadinstitute.atlassian.net/wiki/spaces/GDAC/pages/844333156/Data+Usage+Policy
+
+See also this note from the NIH: https://www.cancer.gov/about-nci/organization/ccg/research/structural-genomics/tcga/using-tcga/citing-tcga
+
+* Guidelines for citing TCGA in your research
+* data usage in publications: *...all TCGA data are available without restrictions on their use in publications or presentations.*
