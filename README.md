@@ -64,7 +64,7 @@ It has a similar structure to the multi-omic data.
 For each cancer type there are three tables:
 
 * `/CANCERTYPE/data`. The table of clinical data. **UTF-8 string dtype**.
-* `/CANCERTYPE/columns'. The list of patients. corresponds to columns in `data`. UTF-8 string dtype.
+* `/CANCERTYPE/columns`. The list of patients. corresponds to columns in `data`. UTF-8 string dtype.
 * `/CANCERTYPE/index`. The list of clinical data features. corresponds to rows in `dataa. UTF-8 string dtype.
 
 ## Some provenance details
