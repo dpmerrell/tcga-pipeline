@@ -15,6 +15,8 @@ OMIC_TYPES = list(OMIC_DICT.keys())
 MISSING_FILES = config["missing_files"]
 EXTRA_FILES = config["extra_files"]
 
+NORMALIZATIONS = {k: v["normalization"] for k,v in OMIC_DICT.items()}
+
 CLINICAL_DICT = config['clinical_data_types']['Clinical_Pick_Tier1']
 
 OMIC_HDF = config["omic_hdf"]
@@ -46,10 +48,44 @@ for ctype, d in EXTRA_FILES.items():
 CLINICAL_CSVS = [os.path.join(fill_template(CLINICAL_DICT['zip_template'], ct),
 	                       fill_template(CLINICAL_DICT['file_template'], ct)) for ct in CANCER_TYPES]
 
+#rule all:
+#    input:
+#        OMIC_HDF,
+#        CLINICAL_HDF
+
+
 rule all:
+	#    input:
+	#        ["temp/{normalization}/{omic_type}.hdf".format(normalization=v, omic_type=k) for k,v in NORMALIZATIONS.items()]
     input:
-        OMIC_HDF,
-        CLINICAL_HDF
+        expand("temp/unnormalized/{omic_type}.hdf", omic_type=OMIC_TYPES)
+
+rule gsrn_normalization:
+    input:
+        "temp/unnormalized/{omic_type}.hdf"
+    output:
+        "temp/grsn/{omic_type}.hdf"
+    shell:
+        "python gsrn_wrapper.py {input} {output}"
+
+
+def get_cancer_types(wc):
+    return sorted( [ctype for ctype in OMIC_CSVS.keys() if wc["omic_type"] in OMIC_CSVS[ctype].keys()]  )
+
+def get_omic_csv_files(wc):
+    ctypes = get_cancer_types(wc)
+    return [OMIC_CSVS[ctype][wc["omic_type"]] for ctype in ctypes]
+
+
+rule merge_omic_data:
+    input:
+        csv_files=get_omic_csv_files
+    params:
+        ctypes=get_cancer_types
+    output:
+        "temp/unnormalized/{omic_type}.hdf"
+    shell:
+        "python merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
 
 
 rule merge_all_omic_data:

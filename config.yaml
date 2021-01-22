@@ -6,14 +6,17 @@ timestamp: "2016_01_28" # This is the most recent timestamp
 
 firehose_get_url: "http://gdac.broadinstitute.org/runs/code/firehose_get_latest.zip"
 
-cancer_types: ["ACC", "CESC", "COADREAD", #"FPPP", 
-               "HNSC", 
+cancer_types: ["ACC", "CESC", "HNSC", 
                "KIRC", "LGG", "LUSC", "PAAD", "READ", "STAD", 
                "THCA", "UCS", "BLCA", "CHOL", "DLBC", "GBM", 
                "KICH", "KIRP", "LIHC", "MESO", "PCPG", "SARC", 
-               "STES", "THYM", "UVM", "BRCA", "COAD", "ESCA", 
-               "GBMLGG", "KIPAN", "LAML", "LUAD", "OV", "PRAD", 
+               "THYM", "UVM", "BRCA", "COAD", "ESCA", 
+               "LAML", "LUAD", "OV", "PRAD", 
                "SKCM", "TGCT", "UCEC"]
+               #"COADREAD",
+               #"STES", 
+               #"GBMLGG", 
+               #"KIPAN", 
 #cancer_types: ["HNSC", "BRCA", "GBM"]
 
 # These flags identify nodes in the 
@@ -24,10 +27,12 @@ data_types:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Methylation_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.meth.by_mean.data.txt"
+        normalization: "unnormalized"
     mRNAseq_Preprocess:           # mRNA-seq data
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.mRNAseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.uncv2.mRNAseq_RSEM_normalized_log2.txt"
+        normalization: "unnormalized"
 #    miRseq_Mature_Preprocess:     # mature miRNA data
 #        run_type: "stddata"
 #        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.miRseq_Mature_Preprocess.Level_3.{timestamp_abbr}00.0.0"
@@ -40,10 +45,12 @@ data_types:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.RPPA_AnnotateWithGene.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.rppa.txt"
+        normalization: "grsn"
     CopyNumber_Gistic2: # CNA data (with "noise" from germline CNVs removed)
         run_type: "analyses"
         zip_template: "analyses__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}-TP.CopyNumber_Gistic2.Level_4.{timestamp_abbr}00.0.0"
         file_template: "all_data_by_genes.txt"
+        normalization: "unnormalized"
 
 # Some files are missing from FireBrowse
 missing_files:
