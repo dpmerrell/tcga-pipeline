@@ -48,25 +48,29 @@ for ctype, d in EXTRA_FILES.items():
 CLINICAL_CSVS = [os.path.join(fill_template(CLINICAL_DICT['zip_template'], ct),
 	                       fill_template(CLINICAL_DICT['file_template'], ct)) for ct in CANCER_TYPES]
 
-#rule all:
-#    input:
-#        OMIC_HDF,
-#        CLINICAL_HDF
-
 
 rule all:
-	#    input:
-	#        ["temp/{normalization}/{omic_type}.hdf".format(normalization=v, omic_type=k) for k,v in NORMALIZATIONS.items()]
     input:
-        expand("temp/unnormalized/{omic_type}.hdf", omic_type=OMIC_TYPES)
+        OMIC_HDF,
+        CLINICAL_HDF
 
-rule gsrn_normalization:
+
+rule merge_all_omic_data:
+    input:
+        ["temp/{normalization}/{omic_type}.hdf".format(normalization=v, omic_type=k) for k,v in NORMALIZATIONS.items()]
+    output:
+        OMIC_HDF
+    shell:
+        "python merge_all_omic_data.py --hdf-path-list {input} --output {output}"
+
+
+rule grsn_normalization:
     input:
         "temp/unnormalized/{omic_type}.hdf"
     output:
         "temp/grsn/{omic_type}.hdf"
     shell:
-        "python gsrn_wrapper.py {input} {output}"
+        "python grsn_wrapper.py {input} {output}"
 
 
 def get_cancer_types(wc):
@@ -87,14 +91,6 @@ rule merge_omic_data:
     shell:
         "python merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
 
-
-rule merge_all_omic_data:
-    input:
-        expand("temp_hdf/{cancer_type}.hdf", cancer_type=CANCER_TYPES)
-    output:
-        OMIC_HDF
-    shell:
-        "python merge_all_omic_data.py --hdf-path-list {input} --group-name-list {CANCER_TYPES} --output {output}"
 
 
 rule merge_clinical_data:
