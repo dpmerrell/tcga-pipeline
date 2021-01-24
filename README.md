@@ -3,10 +3,10 @@ Downloads TCGA data from the Broad Institute's GDAC Firehose pipeline and stores
 
 We've already done the hard work! Feel free to **download the HDF files directly from Zenodo:**
 
-https://zenodo.org/record/4434749
+https://doi.org/10.5281/zenodo.4434748
 
-* `tcga_omic.tar.gz`: multi-omic data (2.3GB)
-* `tcga_clinical.tar.gz`: clinical annotations (7.9MB)
+* `tcga_omic.tar.gz`: multi-omic data (1.6GB)
+* `tcga_clinical.tar.gz`: clinical annotations (6.2MB)
 
 
 ## The Cancer Genome Atlas ([TCGA](https://www.cancer.gov/about-nci/organization/ccg/research/structural-genomics/tcga))
