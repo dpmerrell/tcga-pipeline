@@ -17,7 +17,7 @@ cancer_types: ["ACC", "CESC", "HNSC",
                #"STES", 
                #"GBMLGG", 
                #"KIPAN", 
-#cancer_types: ["HNSC", "BRCA", "GBM"]
+
 
 # These flags identify nodes in the 
 # Broad Firehose data processing DAG:
@@ -27,50 +27,56 @@ data_types:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Methylation_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.meth.by_mean.data.txt"
-        normalization: "unnormalized"
+        workflow: "default"
     mRNAseq_Preprocess:           # mRNA-seq data
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.mRNAseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.uncv2.mRNAseq_RSEM_normalized_log2.txt"
-        normalization: "unnormalized"
-#    miRseq_Mature_Preprocess:     # mature miRNA data
-#        run_type: "stddata"
-#        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.miRseq_Mature_Preprocess.Level_3.{timestamp_abbr}00.0.0"
-#        file_template: "{cancer_type}.miRseq_mature_RPM.txt" 
-#    miRseq_Preprocess:            # miRNA data
-#        run_type: "stddata"
-#        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.miRseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
-#        file_template: "{cancer_type}.miRseq_RPKM_log2.txt" 
+        workflow: "default"
     RPPA_AnnotateWithGene:        # RPPA proteomic data
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.RPPA_AnnotateWithGene.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.rppa.txt"
-        normalization: "grsn"
+        workflow: "default"
     CopyNumber_Gistic2: # CNA data (with "noise" from germline CNVs removed)
         run_type: "analyses"
         zip_template: "analyses__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}-TP.CopyNumber_Gistic2.Level_4.{timestamp_abbr}00.0.0"
         file_template: "all_data_by_genes.txt"
-        normalization: "unnormalized"
+        workflow: "default"
+    MutSigNozzleReport2CV:
+        run_type: "analyses"
+        zip_template: "analyses__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}-TP.MutSigNozzleReport2CV.Level_4.{timestamp_abbr}00.0.0"
+        file_template: "sig_genes.txt"
+        workflow: "unused"
+    Mutation_Packager_Oncotated_Calls:
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Mutation_Packager_Oncotated_Calls.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "MANIFEST.txt" 
+        workflow: "featurize_mutations"
+     
 
 # Some files are missing from FireBrowse
 missing_files:
     LAML: ["RPPA_AnnotateWithGene", "miRseq_Mature_Preprocess", "CopyNumber_Gistic2"]
     LIHC: ["RPPA_AnnotateWithGene"]
-    UVM: ["RPPA_AnnotateWithGene"]
+    MESO: ["Mutation_Packager_Oncotated_Calls", "MutSigNozzleReport2CV"]
     SKCM: ["CopyNumber_Gistic2"]
+    UVM: ["RPPA_AnnotateWithGene"]
 
 # ...or have non-standard names
 extra_files:
     LAML:
         CopyNumber_Gistic2: "analyses__{timestamp}/LAML/{timestamp_abbr}/gdac.broadinstitute.org_LAML-TB.CopyNumber_Gistic2.Level_4.{timestamp_abbr}00.0.0/all_data_by_genes.txt"
+        MutSigNozzleReport2CV: "analyses__{timestamp}/LAML/{timestamp_abbr}/gdac.broadinstitute.org_LAML-TB.MutSigNozzleReport2CV.Level_4.{timestamp_abbr}00.0.0/sig_genes.txt"
     LIHC:
         RPPA_AnnotateWithGene: "stddata__{timestamp}/LIHC/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.RPPA_AnnotateWithGene.Level_3.2016071400.0.0/LIHC.rppa.txt"
     SKCM:
         CopyNumber_Gistic2: "analyses__{timestamp}/SKCM/{timestamp_abbr}/gdac.broadinstitute.org_SKCM-TM.CopyNumber_Gistic2.Level_4.{timestamp_abbr}00.0.0/all_data_by_genes.txt"
+        MutSigNozzleReport2CV: "analyses__{timestamp}/SKCM/{timestamp_abbr}/gdac.broadinstitute.org_SKCM-TM.MutSigNozzleReport2CV.Level_4.{timestamp_abbr}00.0.0/sig_genes.txt"
 
 
 clinical_data_types:
-    Clinical_Pick_Tier1:          # Clinical data
+    Clinical_Pick_Tier1: 
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Clinical_Pick_Tier1.Level_4.{timestamp_abbr}00.0.0"
         file_template: "All_CDEs.txt"

@@ -1,8 +1,8 @@
 
-import h5py
+from os import path
 import pandas as pd
 import argparse
-
+import h5py
 
 def standardize_gene_id(gene_id, suffix):
 
@@ -173,6 +173,8 @@ def read_data(data_filename, data_type_str):
         df = read_Methylation_data(data_filename)
     elif data_type_str == "CopyNumber_Gistic2":
         df = read_CopyNumber_data(data_filename)
+    elif data_type_str == "Mutation_Packager_Oncotated_Calls":
+        df = read_mutation_calls(data_filename)
     else:
         raise ValueError
 

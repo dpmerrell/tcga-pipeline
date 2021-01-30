@@ -6,6 +6,8 @@ configfile: "config.yaml"
 
 PWD = str(pathlib.Path().absolute()) 
 
+SCRIPT_DIR = "scripts"
+
 TIMESTAMP = config["timestamp"]
 TIMESTAMP_ABBR = "".join(TIMESTAMP.split("_"))
 
@@ -15,12 +17,13 @@ OMIC_TYPES = list(OMIC_DICT.keys())
 MISSING_FILES = config["missing_files"]
 EXTRA_FILES = config["extra_files"]
 
-NORMALIZATIONS = {k: v["normalization"] for k,v in OMIC_DICT.items()}
+WORKFLOWS = {k: v["workflow"] for k,v in OMIC_DICT.items() if v["workflow"] != "unused"}
 
 CLINICAL_DICT = config['clinical_data_types']['Clinical_Pick_Tier1']
 
 OMIC_HDF = config["omic_hdf"]
 CLINICAL_HDF = config["clinical_hdf"]
+
 
 def fill_template(template, ct):
     return template.format(cancer_type=ct,
@@ -57,20 +60,12 @@ rule all:
 
 rule merge_all_omic_data:
     input:
-        ["temp/{normalization}/{omic_type}.hdf".format(normalization=v, omic_type=k) for k,v in NORMALIZATIONS.items()]
+        ["temp/{workflow}/{omic_type}.hdf".format(workflow=v, omic_type=k) for k,v in WORKFLOWS.items()]
     output:
         OMIC_HDF
     shell:
-        "python merge_all_omic_data.py --hdf-path-list {input} --output {output}"
+        "python scripts/merge_all_omic_data.py --hdf-path-list {input} --output {output}"
 
-
-rule grsn_normalization:
-    input:
-        "temp/unnormalized/{omic_type}.hdf"
-    output:
-        "temp/grsn/{omic_type}.hdf"
-    shell:
-        "python grsn_wrapper.py {input} {output}"
 
 
 def get_cancer_types(wc):
@@ -81,16 +76,42 @@ def get_omic_csv_files(wc):
     return [OMIC_CSVS[ctype][wc["omic_type"]] for ctype in ctypes]
 
 
-rule merge_omic_data:
+rule merge_default_omic_data:
     input:
         csv_files=get_omic_csv_files
     params:
         ctypes=get_cancer_types
     output:
-        "temp/unnormalized/{omic_type}.hdf"
+        "temp/default/{omic_type}.hdf"
     shell:
-        "python merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
+        "python scripts/merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
 
+
+MUT_CTYPES = get_cancer_types({"omic_type": "Mutation_Packager_Oncotated_Calls"})
+rule merge_mutation_data:
+    input:
+        expand("temp/featurize_mutations/{ctype}.tsv", ctype=MUT_CTYPES)
+    params:
+        ctypes=get_cancer_types
+    output:
+        "temp/featurize_mutations/{omic_type}.hdf"
+    shell:
+        "python scripts/merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input} --cancer-types {params.ctypes}"
+
+def get_maf_csv_file(wc):
+    return OMIC_CSVS[wc["ctype"]]["Mutation_Packager_Oncotated_Calls"]
+
+def get_mutsig_csv_file(wc):
+    return OMIC_CSVS[wc["ctype"]]["MutSigNozzleReport2CV"]
+
+rule featurize_mutations:
+    input:
+        annotations_txt=get_maf_csv_file,
+        mutsig=get_mutsig_csv_file
+    output:
+        "temp/featurize_mutations/{ctype}.tsv"
+    shell:
+        "python scripts/featurize_mutations.py {input.annotations_txt} {input.mutsig} {output}"
 
 
 rule merge_clinical_data:
@@ -99,25 +120,7 @@ rule merge_clinical_data:
     output:
         CLINICAL_HDF
     shell:
-        "python merge_clinical_data.py {output} --csv-files {input} --cancer-types {CANCER_TYPES}"
-
-
-def get_data_files(wc):
-    srt_keys = sorted(list(OMIC_CSVS[wc['cancer_type']].keys()))
-    return [OMIC_CSVS[wc['cancer_type']][k] for k in srt_keys]
-
-def get_data_types(wc):
-    return sorted(list(OMIC_CSVS[wc['cancer_type']].keys()))
-
-rule merge_ctype_data:
-    input:
-        data_files=get_data_files
-    output:
-        temp("temp_hdf/{cancer_type}.hdf")
-    params:
-        data_types=get_data_types
-    shell:
-        "python merge_ctype_omic_data.py {output} --csv-files {input} --data-types {params.data_types}"
+        "python scripts/merge_clinical_data.py {output} --csv-files {input} --cancer-types {CANCER_TYPES}"
 
 
 
@@ -144,18 +147,16 @@ rule download_data:
     shell:
         "./{input} -b -tasks {wildcards.data_type} {wildcards.run_type} {TIMESTAMP} {wildcards.cancer_type}"
 
-# The CNA data is a little different from the others.
-# We'll give it its own rule just for convenience.
-rule download_cna_data:
+
+rule download_analyses:
     input:
         "firehose_get"
     output:
         os.path.join("analyses__"+TIMESTAMP,
 	             "{cancer_type}", TIMESTAMP_ABBR,
-                     "gdac.broadinstitute.org_{cancer_type}-TP.CopyNumber_Gistic2.Level_4.{TIMESTAMP_ABBR}00.0.0.tar.gz")
+                     "gdac.broadinstitute.org_{cancer_type}-{tumor_type,[A-Z]+}.{analysis_id}.Level_4.{TIMESTAMP_ABBR}00.0.0.tar.gz")
     shell:
-        "./{input} -b -tasks CopyNumber_Gistic2 analyses {TIMESTAMP} {wildcards.cancer_type}"
-
+        "./{input} -b -tasks {wildcards.analysis_id} analyses {TIMESTAMP} {wildcards.cancer_type}"
 
 
 rule unzip_firehose_get:
