@@ -2,47 +2,60 @@
 
 from sklearn.cluster import AgglomerativeClustering
 import matplotlib.gridspec as gridspec
+import matplotlib.colors as colors
 from matplotlib import pyplot as plt
+from copy import copy
 import numpy as np
 import argparse
 import json
 import h5py
+import sys
+
+sys.setrecursionlimit(10000)
+
+def cluster_to_ordering(ch, n_s, data_rows):
+
+    def rec_cto(children, n_samples):
+        left = children[-1,0]
+        right = children[-1,1]
+
+        if left < n_samples:
+            left_result = [left]
+            left_var = np.var(data_rows[left,:])
+            left_n = 1
+        else:
+            left_result, left_var, left_n = rec_cto(children[:(left-n_samples+1),:], n_samples)
+
+        if right < n_samples:
+            right_result = [right]
+            right_var = np.var(data_rows[right,:])
+            right_n = 1
+        else:
+            right_result, right_var, right_n = rec_cto(children[:(right-n_samples+1),:], n_samples)
+
+        # Put the higher-variance samples earlier in the ordering
+        if left_var > right_var:
+            new_result = left_result + right_result
+        else:
+            new_result = right_result + left_result
+
+        new_n = left_n + right_n
+        new_var = (left_n*left_var + right_n*right_var)/new_n
+
+        return new_result, new_var, new_n
+
+    return rec_cto(ch, n_s)
 
 
-def cluster_to_ordering(children, n_samples, data_rows):
-     left = children[-1,0]
-     right = children[-1,1]
+def order_rows(data_matrix, n_features=500):
 
-     if left < n_samples:
-         left_result = [left]
-         left_var = np.var(data_rows[left,:])
-         left_n = 1
-     else:
-         left_result, left_var, left_n = cluster_to_ordering(children[:(left-n_samples+1),:], n_samples, data_rows)
-
-     if right < n_samples:
-         right_result = [right]
-         right_var = np.var(data_rows[right,:])
-         right_n = 1
-     else:
-         right_result, right_var, right_n = cluster_to_ordering(children[:(right-n_samples+1),:], n_samples, data_rows)
-
-     # Put the higher-variance samples earlier in the ordering
-     if left_var > right_var:
-         new_result = left_result + right_result
-     else:
-         new_result = right_result + left_result
-
-     new_n = left_n + right_n
-     new_var = (left_n*left_var + right_n*right_var)/new_n
-
-     return new_result, new_var, new_n
-
-
-def order_rows(data_matrix):
+    if n_features < data_matrix.shape[1]:
+        vs = np.nanvar(data_matrix, axis=0)
+        maxvar_idx = np.argsort(vs)[::-1][:n_features]
+        data_matrix = data_matrix[:,maxvar_idx]
 
     print("ORDERING ROWS")
-    row_clust = AgglomerativeClustering()
+    row_clust = AgglomerativeClustering(compute_full_tree=True)
     print("\trunning hierarchical clustering")
     row_clust.fit(data_matrix)
 
@@ -64,7 +77,7 @@ def order_cols(group_v, data_matrix):
 
         print("\trunning hierarchical clustering for group", gp)
         # Perform hierarchical clustering on the columns for this group
-        col_clust = AgglomerativeClustering()
+        col_clust = AgglomerativeClustering(compute_full_tree=True)
         col_clust.fit(data_matrix[:,gp_idx].transpose())
 
         gp_ordering, _, _ = cluster_to_ordering(col_clust.children_, len(gp_idx), data_matrix[:,gp_idx].transpose())
@@ -84,7 +97,7 @@ def load_hdf(input_hdf):
         n_patients = sum([len(p) for p in patients_ls])
         idx = f_in['index'][:]
         
-        combined = np.empty((idx.size, n_patients)) 
+        combined = np.empty((idx.shape[0], n_patients))
         group_v = np.empty(n_patients, dtype=int)
 
         leading = 0
@@ -92,7 +105,7 @@ def load_hdf(input_hdf):
         gp = 0
         for pat, ct in zip(patients_ls, ctypes):
             leading += len(pat)
-            combined[:, lagging:leading] = f_in[ct]['data'][:]
+            combined[:, lagging:leading] = f_in[ct]['data'][:,:]
             group_v[lagging:leading] = gp
             lagging = leading
             gp += 1
@@ -123,7 +136,14 @@ def plot_heatmap(group_v, ctypes, arr, suptitle, out_png):
     vmin = np.nanquantile(arr, 0.1)
     vmax = np.nanquantile(arr, 0.9)
 
-    img = ax2.matshow(arr, cmap="bwr", aspect="auto", vmin=vmin, vmax=vmax)
+    # symmetrize the bounds around 0
+    symm_vmin = min(vmin, -vmax)
+    symm_vmax = max(vmax, -vmin)
+
+    palette = copy(plt.cm.bwr)
+    palette.set_bad('gray')
+
+    img = ax2.matshow(arr, cmap=palette, aspect="auto", norm=colors.Normalize(vmin=symm_vmin, vmax=symm_vmax))
     ax2.set_xticks([])
     ax2.set_yticks([])
 
@@ -148,26 +168,39 @@ if __name__=="__main__":
     parser.add_argument("--save-row-ordering", type=str, default="")
     parser.add_argument("--use-col-ordering", type=str, default="")
     parser.add_argument("--use-row-ordering", type=str, default="")
+    parser.add_argument("--log-transform", action="store_true")
+    parser.add_argument("--standardize", action="store_true")
 
     args = parser.parse_args()
 
     group_v, ctypes, arr = load_hdf(args.data_file)
 
-    arr[np.isnan(arr)] = 0.0
+    if args.log_transform:
+        arr = np.log( arr - np.nanmin(arr, axis=1, keepdims=True) + 1.0)
+    
+    if args.standardize:
+        mus = np.nanmean( arr, axis=1, keepdims=True)
+        sigmas = np.nanstd(arr, axis=1, keepdims=True)
+        arr = (arr - mus) /sigmas
+
 
     # Use hierarchical clustering
     # to reorder the rows and columns
-    if args.use_col_ordering == "":
-        col_ordering = order_cols(group_v, arr)
-    else:
-        with open(args.use_col_ordering, "r") as f:
-            col_ordering = json.load(f)
+    if "" in (args.use_col_ordering, args.use_row_ordering):
+        cluster_arr = arr.copy()
+        cluster_arr[np.isnan(arr)] = 0.0
+        
+        if args.use_col_ordering == "": 
+            col_ordering = order_cols(group_v, cluster_arr)
+        else:
+            with open(args.use_col_ordering, "r") as f:
+                col_ordering = json.load(f)
 
-    if args.use_row_ordering == "":
-        row_ordering = order_rows(arr)
-    else:
-        with open(args.use_row_ordering, "r") as f:
-            row_ordering = json.load(f)
+        if args.use_row_ordering == "":
+            row_ordering = order_rows(cluster_arr)
+        else:
+            with open(args.use_row_ordering, "r") as f:
+                row_ordering = json.load(f)
 
 
     arr = arr[:, col_ordering]
@@ -175,7 +208,6 @@ if __name__=="__main__":
     group_v = group_v[col_ordering]
 
     plot_heatmap(group_v, ctypes, arr, args.data_file, args.out_png)
-
 
     if args.save_col_ordering != "":
         with open(args.save_col_ordering, "w") as f:

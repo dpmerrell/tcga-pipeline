@@ -1,6 +1,7 @@
 
 from os import path
 import pandas as pd
+import numpy as np
 import argparse
 import h5py
 
@@ -42,17 +43,16 @@ def read_mRNAseq_data(data_filename):
     # standardize the gene IDs 
     df = pd.read_csv(data_filename, sep="\t")
     sgi_func = lambda x: standardize_gene_id(x, "_MRNA_SEQ")
-    df.loc[:,gene_col] = df[gene_col].map(sgi_func)
+    df[gene_col] = df[gene_col].map(sgi_func)
+
 
     # Discard the unidentified genes
     df = df.loc[df[gene_col].map(is_valid_gene_id),:]
     
     # index the df by gene
-    df.set_index(gene_col, inplace=True)
-    
     # Eliminate some redundant gene measurements by taking averages
-    df = df.groupby(gene_col).mean()   
-
+    df = df.groupby(gene_col).agg(np.nanmean)   
+    
     # standardize the patient IDs, then transpose the df
     df.columns = df.columns.map(standardize_patient_id)
     df = df.transpose()
@@ -66,6 +66,7 @@ def read_mRNAseq_data(data_filename):
     df = df.transpose()
     srt_cols = sorted(df.columns)
     df = df[srt_cols]
+    #print("9: UNIQUE GENES: ", df.index.unique().shape, " SHAPE:", df.shape, " NULL ROWS: ", (df.isnull().sum(axis=1) == df.shape[1]).sum())
     return df
 
 
@@ -81,11 +82,8 @@ def read_RPPA_data(data_filename):
     # Discard any unidentified genes
     df = df.loc[df[gene_col].map(is_valid_gene_id),:]
     
-    # index the df by gene
-    df.set_index(gene_col, inplace=True)
-    
     # Eliminate some redundant gene measurements by taking averages
-    df = df.groupby(gene_col).mean()   
+    df = df.groupby(gene_col).agg(np.nanmean)   
 
     # standardize the patient IDs, then transpose the df
     df.columns = df.columns.map(standardize_patient_id)
@@ -113,10 +111,8 @@ def read_Methylation_data(data_filename):
     # Discard the unidentified genes
     df = df.loc[df[gene_col].map(is_valid_gene_id),:]
     
-    # index the df by gene
-    df.set_index(gene_col, inplace=True)
     # Eliminate some redundant gene measurements by taking averages
-    df = df.groupby(gene_col).mean()   
+    df = df.groupby(gene_col).agg(np.nanmean) 
 
     # standardize the patient IDs, then transpose the df
     df.columns = df.columns.map(standardize_patient_id)
@@ -162,6 +158,17 @@ def read_CopyNumber_data(data_filename):
     return df
 
 
+def read_maf_data(data_filename):
+
+    df = pd.read_csv(data_filename, sep="\t", index_col=0)
+
+    sgi_func = lambda x: standardize_gene_id(x, "_DNA_MAF")
+
+    df.index = df.index.map(sgi_func)
+
+    return df
+
+
 
 def read_data(data_filename, data_type_str):
 
@@ -174,7 +181,7 @@ def read_data(data_filename, data_type_str):
     elif data_type_str == "CopyNumber_Gistic2":
         df = read_CopyNumber_data(data_filename)
     elif data_type_str == "Mutation_Packager_Oncotated_Calls":
-        df = read_mutation_calls(data_filename)
+        df = read_maf_data(data_filename)
     else:
         raise ValueError
 
@@ -224,7 +231,8 @@ if __name__=="__main__":
                                      choices=["mRNAseq_Preprocess",
                                               "RPPA_AnnotateWithGene",
                                               "Methylation_Preprocess",
-                                              "CopyNumber_Gistic2"])
+                                              "CopyNumber_Gistic2",
+                                              "Mutation_Packager_Oncotated_Calls"])
     parser.add_argument("output_hdf", help="path to the output HDF file")
     parser.add_argument("--csv-files", help="A list of CSV file paths; the data to merge",
                                        nargs="+")
