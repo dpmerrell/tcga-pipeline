@@ -91,26 +91,30 @@ def load_hdf(input_hdf):
 
     with h5py.File(input_hdf, "r") as f_in:
 
-        ctypes = [str(k) for k in f_in.keys() if k != "index"]
-        patients_ls = [f_in[ct]['columns'][:] for ct in ctypes]
-       
-        n_patients = sum([len(p) for p in patients_ls])
-        idx = f_in['index'][:]
-        
-        combined = np.empty((idx.shape[0], n_patients))
-        group_v = np.empty(n_patients, dtype=int)
+        group_v = f_in["cancer_types"][:].astype(str)
+        ctypes = sorted(list(np.unique(group_v)))
+        ctype_to_int = {ct: idx for idx, ct in enumerate(ctypes)}
+        ctype_to_int_v = np.vectorize(lambda x: ctype_to_int[x])
+        group_v = ctype_to_int_v(group_v).astype(int) 
+      
+        data = f_in["data"][:,:] 
+        #n_patients = sum([len(p) for p in patients_ls])
+        #idx = f_in['index'][:]
+        #
+        #combined = np.empty((idx.shape[0], n_patients))
+        #group_v = np.empty(n_patients, dtype=int)
 
-        leading = 0
-        lagging = 0
-        gp = 0
-        for pat, ct in zip(patients_ls, ctypes):
-            leading += len(pat)
-            combined[:, lagging:leading] = f_in[ct]['data'][:,:]
-            group_v[lagging:leading] = gp
-            lagging = leading
-            gp += 1
+        #leading = 0
+        #lagging = 0
+        #gp = 0
+        #for pat, ct in zip(patients_ls, ctypes):
+        #    leading += len(pat)
+        #    combined[:, lagging:leading] = f_in[ct]['data'][:,:]
+        #    group_v[lagging:leading] = gp
+        #    lagging = leading
+        #    gp += 1
  
-    return group_v, ctypes, combined
+    return group_v, ctypes, data 
 
 
 def plot_heatmap(group_v, ctypes, arr, suptitle, out_png):

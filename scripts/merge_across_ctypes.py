@@ -42,7 +42,7 @@ def read_mRNAseq_data(data_filename):
 
     # standardize the gene IDs 
     df = pd.read_csv(data_filename, sep="\t")
-    sgi_func = lambda x: standardize_gene_id(x, "_MRNA_SEQ")
+    sgi_func = lambda x: standardize_gene_id(x, "_mrnaseq")
     df[gene_col] = df[gene_col].map(sgi_func)
 
 
@@ -76,7 +76,7 @@ def read_RPPA_data(data_filename):
 
     # standardize the gene/antibody IDs 
     df = pd.read_csv(data_filename, sep="\t")
-    sgi_func = lambda x: standardize_antibody_id(x, "_PROT_RPPA")
+    sgi_func = lambda x: standardize_antibody_id(x, "_rppa")
     df.loc[:,gene_col] = df[gene_col].map(sgi_func)
 
     # Discard any unidentified genes
@@ -105,7 +105,7 @@ def read_Methylation_data(data_filename):
     # standardize the gene IDs 
     df = pd.read_csv(data_filename, sep="\t", skiprows=[1])
 
-    sgi_func = lambda x: standardize_gene_id(x, "_METH")
+    sgi_func = lambda x: standardize_gene_id(x, "_methylation")
     df.loc[:,gene_col] = df[gene_col].map(sgi_func)
 
     # Discard the unidentified genes
@@ -132,7 +132,7 @@ def read_CopyNumber_data(data_filename):
 
     # standardize the gene IDs 
     df = pd.read_csv(data_filename, sep="\t")
-    sgi_func = lambda x: standardize_gene_id(x, "_CNV")
+    sgi_func = lambda x: standardize_gene_id(x, "_cna")
     df.loc[:,gene_col] = df[gene_col].map(sgi_func)
 
     # Discard some extra columns
@@ -162,7 +162,7 @@ def read_maf_data(data_filename):
 
     df = pd.read_csv(data_filename, sep="\t", index_col=0)
 
-    sgi_func = lambda x: standardize_gene_id(x, "_DNA_MAF")
+    sgi_func = lambda x: standardize_gene_id(x, "_mutation")
 
     df.index = df.index.map(sgi_func)
 
@@ -190,37 +190,50 @@ def read_data(data_filename, data_type_str):
 
 def read_all_data(all_data_files, all_cancer_types, data_type):
 
-    col_dict = {}
+    #col_dict = {}
+    ctype_ls = []
     combined = pd.DataFrame()
 
     for data_file, cancer_type in zip(all_data_files, all_cancer_types):
         new_df = read_data(data_file, data_type)
-        col_dict[cancer_type] = new_df.columns.tolist()
+        #col_dict[cancer_type] = new_df.columns.tolist()
+        ctype_ls += [cancer_type]*new_df.shape[1]
         combined = pd.concat((combined, new_df), axis=1)
 
     
-    return combined, col_dict
+    return combined, ctype_ls
 
 
-def write_hdf(dataframe, col_dict, filename):
+def write_hdf(dataframe, ctype_ls, filename):
 
     with h5py.File(filename, "w") as f:
 
-        for ctype, cols in col_dict.items():
-               
-            dset = f.create_dataset(ctype+"/data", dataframe.loc[:,cols].values.shape,
-                                                   dtype=float)
-            dset[:,:] = dataframe.loc[:,cols].values
+        #for ctype, cols in col_dict.items():
+        #       
+        #    dset = f.create_dataset(ctype+"/data", dataframe.loc[:,cols].values.shape,
+        #                                           dtype=float)
+        #    dset[:,:] = dataframe.loc[:,cols].values
 
-            columns = f.create_dataset(ctype+"/columns", (len(cols),),
-                                       dtype=h5py.string_dtype('utf-8'))
-            columns[:] = cols
+        #    columns = f.create_dataset(ctype+"/columns", (len(cols),),
+        #                               dtype=h5py.string_dtype('utf-8'))
+        #    columns[:] = cols
 
+        dset = f.create_dataset("data", dataframe.shape, dtype=float)
+        dset[:,:] = dataframe.values
+
+        columns = f.create_dataset("columns", dataframe.columns.shape,
+                                              dtype=h5py.string_dtype('utf-8'))
+        columns[:] = dataframe.columns.values
 
         idx = f.create_dataset("index", dataframe.index.shape,
                                         dtype=h5py.string_dtype('utf-8'))
-
         idx[:] = dataframe.index.values
+
+        ctypes = f.create_dataset("cancer_types", len(ctype_ls),
+                                  dtype=h5py.string_dtype('utf-8'))
+        ctypes[:] = ctype_ls
+
+
     return
 
 
@@ -242,10 +255,10 @@ if __name__=="__main__":
     args = parser.parse_args()
 
 
-    df, col_dict = read_all_data(args.csv_files, 
+    df, ctype_ls = read_all_data(args.csv_files, 
                                  args.cancer_types, 
                                  args.data_type)
 
-    write_hdf(df, col_dict, args.output_hdf)
+    write_hdf(df, ctype_ls, args.output_hdf)
 
 

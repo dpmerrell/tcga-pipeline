@@ -7,26 +7,35 @@ import h5py
 def get_patients_and_features(hdf_path_list):
 
     print("Getting patients and features")
-    patients = {}
+    
     features = []
+    ctype_to_patients = {}
     for hdf_path in hdf_path_list:
 
         with h5py.File(hdf_path, "r") as f:
             
             features += list(f["index"][:])
-            
-            for k in f.keys():
-                if k != "index":
-                    if k not in patients.keys():
-                        patients[k] = set([])
+            new_patients = f["columns"][:]
+            new_ctypes = f["cancer_types"][:]
 
-                    patients[k] |= set(f[k]['columns'])
+            for pat, ct in zip(new_patients, new_ctypes):
+                if ct not in ctype_to_patients.keys():
+                    ctype_to_patients[ct] = set([pat])
+                else:
+                    ctype_to_patients[ct].add(pat)
 
-    return patients, features
+            #for k in f.keys():
+            #    if k != "index":
+            #        if k not in patients.keys():
+            #            patients[k] = set([])
+
+            #        patients[k] |= set(f[k]['columns'])
+
+    return ctype_to_patients, features
 
 
 
-def initialize_output(output_path, patients, features):
+def initialize_output(output_path, all_patients, all_ctypes, features):
 
     print("Initializing output")
 
@@ -37,53 +46,88 @@ def initialize_output(output_path, patients, features):
                                  dtype=h5py.string_dtype('utf-8'))
     index[:] = features
 
-    # Create the cancer type-specific datasets
-    for ctype, p_set in patients.items():
+    dataset = f_out.create_dataset("data", shape=(len(features), len(all_patients)))
+    dataset[:,:] = np.nan
 
-        dataset = f_out.create_dataset(ctype+"/data", shape=(len(features), len(p_set)))
-        dataset[:] = np.nan
+    columns = f_out.create_dataset("columns", shape=(len(all_patients),),
+                                   dtype=h5py.string_dtype('utf-8'))
+    columns[:] = all_patients
 
-        columns = f_out.create_dataset(ctype+"/columns", shape=(len(p_set),),
-                                       dtype=h5py.string_dtype('utf-8'))
-        columns[:] = sorted(list(p_set))
+    ctypes = f_out.create_dataset("cancer_types", shape=(len(all_ctypes),),
+                                  dtype=h5py.string_dtype('utf-8'))
+    ctypes[:] = all_ctypes
 
     return f_out
 
 
-def add_dataset(input_path, f_out, leading, lagging):
+def compute_chunks(idx_ls):
+
+    idx_ls_srt = sorted(idx_ls)
+    chunks = []
+
+    cur_start = idx_ls_srt[0]
+    cur_end = idx_ls_srt[0]
+    for idx in idx_ls_srt[1:]:
+        if idx == cur_end + 1:
+            cur_end += 1
+        else:
+            chunks.append([cur_start, cur_end])
+            cur_start = idx
+            cur_end = idx
+    chunks.append([cur_start, cur_end])
+
+    return chunks
+
+
+def add_dataset(input_path, patient_to_col, f_out, leading, lagging):
 
     print("Adding data from ", input_path)
     with h5py.File(input_path, "r") as f_in:
-        ctypes = [k for k in f_in.keys() if k != "index"]
+        #ctypes = [k for k in f_in.keys() if k != "index"]
         
         # Update the leading row index
         leading += len(f_in["index"]) 
 
-        # Add data for each cancer type
-        for ct in ctypes:
+        # Need to build maps between
+        # columns of f_in and columns of f_out.
+        # The columns of f_in are a subset of the 
+        # columns of f_out.
+        new_data = f_in["data"][:,:]
+        in_out_idx = [patient_to_col[pat] for pat in f_in["columns"][:]]
+        out_in_idx = {out_idx: in_idx for in_idx, out_idx in enumerate(in_out_idx)}
 
-            # Get the correct column indices
-            patient_encoder = {pat: i for i, pat in enumerate(f_out[ct]["columns"])}
-            patient_idx = [patient_encoder[pat] for pat in f_in[ct]["columns"]]
-            
-            # Insert data from f_in to the correct parts of f_out
-            for i, pat in enumerate(patient_idx): 
-                f_out[ct+"/data"][lagging:leading, pat] = f_in[ct+"/data"][:,i]
-
+        # Writing to HDF is much more efficient if we
+        # write "chunks" of columns at a time
+        # (rather than individual columns)
+        out_column_chunks = compute_chunks(in_out_idx)
+        for chunk in out_column_chunks:
+            mapped_chunk = [out_in_idx[out_idx] for out_idx in range(chunk[0],chunk[1]+1)]
+            f_out["data"][lagging:leading, chunk[0]:chunk[1]+1] = new_data[:,mapped_chunk]
+    
     # Update the lagging row index
     lagging = leading
 
     return leading, lagging
 
 
-def add_all_datasets(input_path_list, patients, features, output_path):
+def add_all_datasets(input_path_list, ctype_to_patients, features, output_path):
 
-    f_out = initialize_output(output_path, patients, features)
+    # Some bookkeeping data structures
+    ctypes = sorted(list(ctype_to_patients.keys()))
+    all_patients = sum([sorted(list(ctype_to_patients[k])) for k in ctypes], start=[])
+    print("ALL PATIENTS:", len(all_patients))
+    patient_to_ctype = {pat: k for k in ctypes for pat in ctype_to_patients[k]}
+    all_ctypes = [patient_to_ctype[pat] for pat in all_patients] 
+    patient_to_col = {pat: idx for idx, pat in enumerate(all_patients)}
+    print("PATIENT TO COL: ", len(patient_to_col))
+    print(patient_to_col)
+
+    f_out = initialize_output(output_path, all_patients, all_ctypes, features)
     
     leading = 0
     lagging = 0
     for i, input_path in enumerate(input_path_list):
-        leading, lagging = add_dataset(input_path, f_out, 
+        leading, lagging = add_dataset(input_path, patient_to_col, f_out, 
                                        leading, lagging)
 
     f_out.close()
@@ -99,8 +143,8 @@ if __name__=="__main__":
    
     args = argparser.parse_args()
 
-    patients, features = get_patients_and_features(args.hdf_path_list) 
+    ctype_to_patients, features = get_patients_and_features(args.hdf_path_list) 
 
-    add_all_datasets(args.hdf_path_list, patients, features, args.output)
+    add_all_datasets(args.hdf_path_list, ctype_to_patients, features, args.output)
 
 
