@@ -24,13 +24,6 @@ def get_patients_and_features(hdf_path_list):
                 else:
                     ctype_to_patients[ct].add(pat)
 
-            #for k in f.keys():
-            #    if k != "index":
-            #        if k not in patients.keys():
-            #            patients[k] = set([])
-
-            #        patients[k] |= set(f[k]['columns'])
-
     return ctype_to_patients, features
 
 
@@ -83,7 +76,6 @@ def add_dataset(input_path, patient_to_col, f_out, leading, lagging):
 
     print("Adding data from ", input_path)
     with h5py.File(input_path, "r") as f_in:
-        #ctypes = [k for k in f_in.keys() if k != "index"]
         
         # Update the leading row index
         leading += len(f_in["index"]) 
@@ -115,12 +107,9 @@ def add_all_datasets(input_path_list, ctype_to_patients, features, output_path):
     # Some bookkeeping data structures
     ctypes = sorted(list(ctype_to_patients.keys()))
     all_patients = sum([sorted(list(ctype_to_patients[k])) for k in ctypes], start=[])
-    print("ALL PATIENTS:", len(all_patients))
     patient_to_ctype = {pat: k for k in ctypes for pat in ctype_to_patients[k]}
     all_ctypes = [patient_to_ctype[pat] for pat in all_patients] 
     patient_to_col = {pat: idx for idx, pat in enumerate(all_patients)}
-    print("PATIENT TO COL: ", len(patient_to_col))
-    print(patient_to_col)
 
     f_out = initialize_output(output_path, all_patients, all_ctypes, features)
     

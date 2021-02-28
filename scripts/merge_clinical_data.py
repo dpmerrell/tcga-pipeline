@@ -28,32 +28,40 @@ def read_clinical_data(data_filename):
     return df
 
 
-def read_all_data(data_filenames):
+def read_all_data(data_filenames, all_cancer_types):
 
-    df_list = [read_clinical_data(filename) for filename in data_filenames]
+    ctype_ls = []
+    combined = pd.DataFrame()
+
+    for data_file, cancer_type in zip(data_filenames, all_cancer_types):
+        new_df = read_clinical_data(data_file)
+        ctype_ls += [cancer_type]*new_df.shape[1]
+        combined = pd.concat((combined, new_df), axis=1)
+
+    return combined, ctype_ls
+
+
+def store_all_data(combined_data, cancer_type_list, output_filename):
+
+    combined_data = combined_data.astype(str)
     
-    return df_list
-
-
-def store_all_data(df_list, cancer_type_list, output_filename):
-
     with h5py.File(output_filename, "w") as out_f:
-
-        for df, ctype in zip(df_list, cancer_type_list):
-           
-            df = df.astype(str)
  
-            dset = out_f.create_dataset(ctype+"/data", df.shape,
-                                        dtype=h5py.string_dtype('utf-8'))
-            dset[:,:] = df.values
+        dset = out_f.create_dataset("data", combined_data.shape,
+                                    dtype=h5py.string_dtype('utf-8'))
+        dset[:,:] = combined_data.values
 
-            rowset = out_f.create_dataset(ctype+"/index", df.index.shape,
-                                          dtype=h5py.string_dtype('utf-8'))
-            rowset[:] = df.index.values
-            
-            colset = out_f.create_dataset(ctype+"/columns", df.columns.shape,
-                                          dtype=h5py.string_dtype('utf-8'))
-            colset[:] = df.columns.values
+        rowset = out_f.create_dataset("index", combined_data.index.shape,
+                                      dtype=h5py.string_dtype('utf-8'))
+        rowset[:] = combined_data.index.values
+        
+        colset = out_f.create_dataset("columns", combined_data.columns.shape,
+                                      dtype=h5py.string_dtype('utf-8'))
+        colset[:] = combined_data.columns.values
+
+        ctype_set = out_f.create_dataset("cancer_types", (len(cancer_type_list),),
+                                         dtype=h5py.string_dtype('utf-8'))
+        ctype_set[:] = cancer_type_list
 
     return 
 
@@ -61,14 +69,14 @@ def store_all_data(df_list, cancer_type_list, output_filename):
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser("Get data from text files; merge it; and put it in an HDF file")
-    parser.add_argument("--csv-files", nargs="+", help="a list of path to the sqlite database")
+    parser.add_argument("--csv-files", nargs="+", help="a list of paths to clinical CSV files")
     parser.add_argument("--cancer-types", nargs="+", help="a list of cancer type names")
     parser.add_argument("hdf_file", help="path to the output HDF file")
 
     args = parser.parse_args()
 
-    df_list = read_all_data(args.csv_files) 
+    combined_df, ctype_ls = read_all_data(args.csv_files, args.cancer_types) 
 
-    store_all_data(df_list, args.cancer_types, args.hdf_file)
+    store_all_data(combined_df, ctype_ls, args.hdf_file)
 
 

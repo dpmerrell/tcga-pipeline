@@ -190,13 +190,11 @@ def read_data(data_filename, data_type_str):
 
 def read_all_data(all_data_files, all_cancer_types, data_type):
 
-    #col_dict = {}
     ctype_ls = []
     combined = pd.DataFrame()
 
     for data_file, cancer_type in zip(all_data_files, all_cancer_types):
         new_df = read_data(data_file, data_type)
-        #col_dict[cancer_type] = new_df.columns.tolist()
         ctype_ls += [cancer_type]*new_df.shape[1]
         combined = pd.concat((combined, new_df), axis=1)
 
@@ -207,16 +205,6 @@ def read_all_data(all_data_files, all_cancer_types, data_type):
 def write_hdf(dataframe, ctype_ls, filename):
 
     with h5py.File(filename, "w") as f:
-
-        #for ctype, cols in col_dict.items():
-        #       
-        #    dset = f.create_dataset(ctype+"/data", dataframe.loc[:,cols].values.shape,
-        #                                           dtype=float)
-        #    dset[:,:] = dataframe.loc[:,cols].values
-
-        #    columns = f.create_dataset(ctype+"/columns", (len(cols),),
-        #                               dtype=h5py.string_dtype('utf-8'))
-        #    columns[:] = cols
 
         dset = f.create_dataset("data", dataframe.shape, dtype=float)
         dset[:,:] = dataframe.values
