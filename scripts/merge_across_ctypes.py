@@ -20,7 +20,7 @@ def standardize_antibody_id(ab_id, suffix):
     std_ab = gene_ab[1].upper()
     std_ab = std_ab.replace("_","-")
 
-    return std_gene + suffix + "_" + std_ab
+    return "_".join([std_gene, std_ab, suffix])
 
 
 def standardize_patient_id(patient_id):
@@ -76,7 +76,7 @@ def read_RPPA_data(data_filename):
 
     # standardize the gene/antibody IDs 
     df = pd.read_csv(data_filename, sep="\t")
-    sgi_func = lambda x: standardize_antibody_id(x, "_rppa")
+    sgi_func = lambda x: standardize_antibody_id(x, "rppa")
     df.loc[:,gene_col] = df[gene_col].map(sgi_func)
 
     # Discard any unidentified genes

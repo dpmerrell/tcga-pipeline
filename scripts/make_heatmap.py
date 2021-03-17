@@ -98,21 +98,6 @@ def load_hdf(input_hdf):
         group_v = ctype_to_int_v(group_v).astype(int) 
       
         data = f_in["data"][:,:] 
-        #n_patients = sum([len(p) for p in patients_ls])
-        #idx = f_in['index'][:]
-        #
-        #combined = np.empty((idx.shape[0], n_patients))
-        #group_v = np.empty(n_patients, dtype=int)
-
-        #leading = 0
-        #lagging = 0
-        #gp = 0
-        #for pat, ct in zip(patients_ls, ctypes):
-        #    leading += len(pat)
-        #    combined[:, lagging:leading] = f_in[ct]['data'][:,:]
-        #    group_v[lagging:leading] = gp
-        #    lagging = leading
-        #    gp += 1
  
     return group_v, ctypes, data 
 
