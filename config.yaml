@@ -82,3 +82,10 @@ clinical_data_types:
         file_template: "All_CDEs.txt"
 
 
+viz_options:
+    mRNAseq_Preprocess: "--standardize"
+    Methylation_Preprocess: ""
+    RPPA_AnnotateWithGene: ""
+    CopyNumber_Gistic2: ""
+    Mutation_Packager_Oncotated_Calls: ""
+

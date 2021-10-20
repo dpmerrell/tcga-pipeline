@@ -191,7 +191,6 @@ if __name__=="__main__":
             with open(args.use_row_ordering, "r") as f:
                 row_ordering = json.load(f)
 
-
     arr = arr[:, col_ordering]
     arr = arr[row_ordering, :]
     group_v = group_v[col_ordering]

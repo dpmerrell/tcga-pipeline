@@ -10,12 +10,13 @@ SCRIPT_DIR = "scripts"
 
 TIMESTAMP = config["timestamp"]
 TIMESTAMP_ABBR = "".join(TIMESTAMP.split("_"))
-
+FIREHOSE_GET_URL = config["firehose_get_url"]
 CANCER_TYPES = config["cancer_types"]
 OMIC_DICT = config["data_types"]
 OMIC_TYPES = list(OMIC_DICT.keys())
 MISSING_FILES = config["missing_files"]
 EXTRA_FILES = config["extra_files"]
+VIZ_OPTIONS = config["viz_options"]
 
 WORKFLOWS = {k: v["workflow"] for k,v in OMIC_DICT.items() if v["workflow"] != "unused"}
 
@@ -28,7 +29,7 @@ CLINICAL_HDF = config["clinical_hdf"]
 def fill_template(template, ct):
     return template.format(cancer_type=ct,
 		           timestamp=TIMESTAMP,
-			   timestamp_abbr=TIMESTAMP_ABBR)
+			       timestamp_abbr=TIMESTAMP_ABBR)
 
 
 # Build a dictionary containing the names of all of the
@@ -55,8 +56,25 @@ CLINICAL_CSVS = [os.path.join(fill_template(CLINICAL_DICT['zip_template'], ct),
 rule all:
     input:
         OMIC_HDF,
-        CLINICAL_HDF
+        CLINICAL_HDF,
+        expand("{ot}.png", ot=WORKFLOWS.keys())
 
+def hdf_path(wc):
+    return "temp/{}/{}.hdf".format(WORKFLOWS[wc["omic_type"]], wc["omic_type"])
+
+def get_viz_options(wc):
+    return VIZ_OPTIONS[wc["omic_type"]]
+
+rule visualize_data:
+    input:
+        src="scripts/make_heatmap.py",
+        hdf=hdf_path
+    output:
+        img="{omic_type}.png"
+    params:
+        opts=get_viz_options
+    shell:
+        "python {input.src} {input.hdf} {output.img} {params.opts}"
 
 rule merge_all_omic_data:
     input:
