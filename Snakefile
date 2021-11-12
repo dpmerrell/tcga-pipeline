@@ -96,25 +96,27 @@ def get_omic_csv_files(wc):
 
 rule merge_default_omic_data:
     input:
-        csv_files=get_omic_csv_files
+        csv_files=get_omic_csv_files,
+        script=os.path.join("scripts","merge_across_ctypes.py")
     params:
         ctypes=get_cancer_types
     output:
         "temp/default/{omic_type}.hdf"
     shell:
-        "python scripts/merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
+        "python {input.script} {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
 
 
 MUT_CTYPES = get_cancer_types({"omic_type": "Mutation_Packager_Oncotated_Calls"})
 rule merge_mutation_data:
     input:
-        expand("temp/featurize_mutations/{ctype}.tsv", ctype=MUT_CTYPES)
+        expand("temp/featurize_mutations/{ctype}.tsv", ctype=MUT_CTYPES),
+        script=os.path.join("scripts","merge_across_ctypes.py")
     params:
         ctypes=get_cancer_types
     output:
         "temp/featurize_mutations/{omic_type}.hdf"
     shell:
-        "python scripts/merge_across_ctypes.py {wildcards.omic_type} {output} --csv-files {input} --cancer-types {params.ctypes}"
+        "python {input.script} {wildcards.omic_type} {output} --csv-files {input} --cancer-types {params.ctypes}"
 
 def get_maf_csv_file(wc):
     return OMIC_CSVS[wc["ctype"]]["Mutation_Packager_Oncotated_Calls"]
@@ -124,12 +126,13 @@ def get_mutsig_csv_file(wc):
 
 rule featurize_mutations:
     input:
+        script=os.path.join("scripts","featurize_mutations.py"),
         annotations_txt=get_maf_csv_file,
         mutsig=get_mutsig_csv_file
     output:
         "temp/featurize_mutations/{ctype}.tsv"
     shell:
-        "python scripts/featurize_mutations.py {input.annotations_txt} {input.mutsig} {output}"
+        "python {input.script} {input.annotations_txt} {input.mutsig} {output}"
 
 
 rule merge_clinical_data:

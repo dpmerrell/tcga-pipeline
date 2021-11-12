@@ -35,14 +35,14 @@ def initialize_output(output_path, all_patients, all_ctypes, features):
     f_out = h5py.File(output_path, 'w')
 
     # Create the 'index' group in the HDF file
-    index = f_out.create_dataset("index", shape=(len(features),),
+    index = f_out.create_dataset("features", shape=(len(features),),
                                  dtype=h5py.string_dtype('utf-8'))
     index[:] = features
 
     dataset = f_out.create_dataset("data", shape=(len(features), len(all_patients)))
     dataset[:,:] = np.nan
 
-    columns = f_out.create_dataset("columns", shape=(len(all_patients),),
+    columns = f_out.create_dataset("instances", shape=(len(all_patients),),
                                    dtype=h5py.string_dtype('utf-8'))
     columns[:] = all_patients
 

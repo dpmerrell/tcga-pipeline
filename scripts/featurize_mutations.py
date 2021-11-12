@@ -20,11 +20,9 @@ def get_all_maf_files(manifest_path):
     return maf_files
 
 
-def get_patient_id(file_path):
-
-    fname = file_path.split(path.sep)[-1]
-
-    return fname[:12]
+def get_barcode(file_path):
+    fname = path.basename(file_path)
+    return fname.split(".")[0]
 
 
 def sanitize(score_str):
@@ -61,25 +59,21 @@ def get_mutation_scores(maf_file):
 
 def tabulate_annotations(maf_files, gene_ls):
 
-    patient_ids = sorted(list(set([get_patient_id(mf) for mf in maf_files])))
-    result = pd.DataFrame(index=gene_ls, columns=patient_ids)
+    barcodes = sorted(list(set([get_barcode(mf) for mf in maf_files])))
+    result = pd.DataFrame(index=gene_ls, columns=barcodes)
     result.loc[:,:] = 0.0
  
     for mf in maf_files:
  
-        pat = get_patient_id(mf)
+        barcode = get_barcode(mf)
         score_df = get_mutation_scores(mf)
 
         # in case of redundancies: groupby gene; take the max
         score_df = score_df.groupby(["Hugo_Symbol"]).max()
-        score_df.columns = [pat]
+        score_df.columns = [barcode]
 
-        result[pat] = score_df[pat]
-        #print(result)
-        #print(score_df)
+        result[barcode] = score_df[barcode]
 
-        ## update the `result` dataframe with the values from this patient-specific dataframe
-        #result.loc[score_df.index,pat] = score_df[score_df > result.loc[score_df.index, pat]]
 
     result[result.isnull()] = 0.0
     return result

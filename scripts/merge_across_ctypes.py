@@ -5,6 +5,10 @@ import numpy as np
 import argparse
 import h5py
 
+
+PRIMARY_TUMOR_TYPES = set(["01","03","09"])
+
+
 def standardize_gene_id(gene_id, suffix):
 
     std_id = gene_id.split("|")[0]
@@ -20,14 +24,19 @@ def standardize_antibody_id(ab_id, suffix):
     std_ab = gene_ab[1].upper()
     std_ab = std_ab.replace("_","-")
 
-    return "_".join([std_gene, std_ab, suffix])
+    return "_".join([std_gene, suffix])
 
 
-def standardize_patient_id(patient_id):
-    std_id = patient_id.upper()
+def get_patient_id(barcode):
+    std_id = barcode.upper()
     std_id = std_id.replace("_","-")
     std_id = "-".join(std_id.split("-")[:3])
     return std_id
+
+
+def get_sample_type(barcode):
+    return barcode.replace("_","-").split("-")[3][:2]
+
 
 """
 Discard IDs that don't seem to be valid
@@ -53,20 +62,26 @@ def read_mRNAseq_data(data_filename):
     # Eliminate some redundant gene measurements by taking averages
     df = df.groupby(gene_col).agg(np.nanmean)   
     
-    # standardize the patient IDs, then transpose the df
-    df.columns = df.columns.map(standardize_patient_id)
+    # transpose the df
     df = df.transpose()
 
-    df.index.rename("patient", inplace=True)
+    df.index.rename("barcode", inplace=True)
 
-    # group by patient; take the mean over replicates
-    df = df.groupby("patient").mean() 
+    df["patient"] = df.index.map(get_patient_id)
+    df["sample_type"] = df.index.map(get_sample_type)
+
+    primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
+    df = df.loc[primary_tumor_idx, :]
+
+    assert len(df["patient"].unique()) == df.shape[0]
+    df.set_index(["patient"], inplace=True)
+    df.drop("sample_type", axis=1, inplace=True)
 
     # transpose the df (again...)
     df = df.transpose()
     srt_cols = sorted(df.columns)
     df = df[srt_cols]
-    #print("9: UNIQUE GENES: ", df.index.unique().shape, " SHAPE:", df.shape, " NULL ROWS: ", (df.isnull().sum(axis=1) == df.shape[1]).sum())
+    
     return df
 
 
@@ -85,12 +100,21 @@ def read_RPPA_data(data_filename):
     # Eliminate some redundant gene measurements by taking averages
     df = df.groupby(gene_col).agg(np.nanmean)   
 
-    # standardize the patient IDs, then transpose the df
-    df.columns = df.columns.map(standardize_patient_id)
+    # transpose the df
     df = df.transpose()
-    df.index.rename("patient", inplace=True)
+    
+    df.index.rename("barcode", inplace=True)
 
-    df = df.groupby("patient").mean() 
+    df["patient"] = df.index.map(get_patient_id)
+    df["sample_type"] = df.index.map(get_sample_type)
+    print("RPPA SAMPLE TYPES:", df["sample_type"])
+
+    primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
+    df = df.loc[primary_tumor_idx, :]
+
+    assert len(df["patient"].unique()) == df.shape[0]
+    df.set_index(["patient"], inplace=True)
+    df.drop("sample_type", axis=1, inplace=True)
 
     df = df.transpose()
     srt_cols = sorted(df.columns)
@@ -114,12 +138,21 @@ def read_Methylation_data(data_filename):
     # Eliminate some redundant gene measurements by taking averages
     df = df.groupby(gene_col).agg(np.nanmean) 
 
-    # standardize the patient IDs, then transpose the df
-    df.columns = df.columns.map(standardize_patient_id)
+    # transpose the df
     df = df.transpose()
-    df.index.rename("patient", inplace=True)
 
-    df = df.groupby("patient").mean()
+    # Parse barcodes
+    df.index.rename("barcode", inplace=True)    
+    df["patient"] = df.index.map(get_patient_id)
+    df["sample_type"] = df.index.map(get_sample_type)
+
+    # Keep only records for primary tumor samples
+    primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
+    df = df.loc[primary_tumor_idx, :]
+
+    assert len(df["patient"].unique()) == df.shape[0]
+    df.set_index(["patient"], inplace=True)
+    df.drop("sample_type", axis=1, inplace=True)
 
     df = df.transpose() 
     srt_cols = sorted(df.columns)
@@ -144,13 +177,20 @@ def read_CopyNumber_data(data_filename):
     # Eliminate some redundant gene measurements by taking averages
     df = df.groupby(gene_col).mean()   
 
-    # standardize the patient IDs
-    df.columns = df.columns.map(standardize_patient_id)
-
-    # If a patient has multiple records, take their average
     df = df.transpose()
-    df.index.rename("patient", inplace=True)
-    df = df.groupby("patient").mean() 
+
+    # Parse barcodes
+    df.index.rename("barcode", inplace=True)
+    df["patient"] = df.index.map(get_patient_id)
+    df["sample_type"] = df.index.map(get_sample_type)
+
+    # Keep only records for primary tumor samples
+    primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
+    df = df.loc[primary_tumor_idx, :]
+
+    assert len(df["patient"].unique()) == df.shape[0]
+    df.set_index(["patient"], inplace=True)
+    df.drop("sample_type", axis=1, inplace=True)
 
     df = df.transpose()
     srt_cols = sorted(df.columns)
@@ -163,6 +203,15 @@ def read_maf_data(data_filename):
     df = pd.read_csv(data_filename, sep="\t", index_col=0)
 
     sgi_func = lambda x: standardize_gene_id(x, "_mutation")
+
+    sample_types = df.columns.map(get_sample_type)
+    patient_ids = df.columns.map(get_patient_id)
+
+    primary_tumor_cols = sample_types.map(lambda x: x in PRIMARY_TUMOR_TYPES)
+
+    df = df.loc[:,primary_tumor_cols]
+    patient_ids = patient_ids[primary_tumor_cols]
+    df.columns = patient_ids
 
     df.index = df.index.map(sgi_func)
 
