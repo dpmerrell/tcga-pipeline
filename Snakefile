@@ -106,6 +106,44 @@ rule merge_default_omic_data:
         "python {input.script} {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
 
 
+MRNASEQ_BARCODE_CTYPES = get_cancer_types({"omic_type": "mRNAseq_Preprocess"})
+rule merge_restore_barcode_data:
+    input:
+        restored=expand("temp/restore_barcode/{ctype}_{{omic_type}}.tsv", ctype=MRNASEQ_BARCODE_CTYPES),
+        script=os.path.join("scripts", "merge_across_ctypes.py")
+    params:
+        ctypes=get_cancer_types
+    output:
+        "temp/restore_barcode/{omic_type}.hdf"
+    shell:
+        "python {input.script} {wildcards.omic_type} {output} --csv-files {input.restored} --cancer-types {params.ctypes}"
+
+
+
+def get_mrnaseq_csv_file(wc):
+    return OMIC_CSVS[wc["ctype"]]["mRNAseq_Preprocess"]
+
+def get_barcoded_mrnaseq_file(wc):
+    return OMIC_CSVS[wc["ctype"]]["Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data"]
+
+rule restore_mrnaseq_barcodes:
+    input:
+        script=os.path.join("scripts", "restore_barcodes.py"),
+        mrnaseq_tsv=get_mrnaseq_csv_file,
+        barcoded_tsv=get_barcoded_mrnaseq_file
+    output:
+        "temp/restore_barcode/{ctype}_mRNAseq_Preprocess.tsv"
+    shell:
+        "python {input.script} {input.mrnaseq_tsv} {input.barcoded_tsv} {output}"
+
+
+def get_methylation_csv_file(wc):
+    return OMIC_CSVS[wc["ctype"]]["Methylation_Preprocess"]
+
+def get_barcoded_methylation_file(wc):
+    return OMIC_CSVS[wc["ctype"]]["fingbob"]
+
+
 MUT_CTYPES = get_cancer_types({"omic_type": "Mutation_Packager_Oncotated_Calls"})
 rule merge_mutation_data:
     input:

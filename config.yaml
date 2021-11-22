@@ -27,17 +27,23 @@ data_types:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Methylation_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.meth.by_mean.data.txt"
+        #workflow: "methylation_restore_barcode"
         workflow: "default"
     mRNAseq_Preprocess:           # mRNA-seq data
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.mRNAseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.uncv2.mRNAseq_RSEM_normalized_log2.txt"
-        #workflow: "restore_barcodes"
-        workflow: "default"
+        workflow: "mrnaseq_restore_barcode"
+        #workflow: "default"
     Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.{timestamp_abbr}00.0.0"
-        file_template: "{cancer_type}.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt"
+        file_template: "{cancer_type}.rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt"
+        workflow: "unused"
+    Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data:
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.{timestamp_abbr}00.0.0"
+        file_template: "{cancer_type}.rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt"
         workflow: "unused"
     RPPA_AnnotateWithGene:        # RPPA proteomic data
         run_type: "stddata"
@@ -63,11 +69,12 @@ data_types:
 
 # Some files are missing from FireBrowse
 missing_files:
-    LAML: ["RPPA_AnnotateWithGene", "miRseq_Mature_Preprocess", "CopyNumber_Gistic2"]
+    LAML: ["RPPA_AnnotateWithGene", "CopyNumber_Gistic2"]
     LIHC: ["RPPA_AnnotateWithGene"]
     MESO: ["Mutation_Packager_Oncotated_Calls", "MutSigNozzleReport2CV"]
     SKCM: ["CopyNumber_Gistic2"]
     UVM: ["RPPA_AnnotateWithGene"]
+
 
 # ...or have non-standard names
 extra_files:
