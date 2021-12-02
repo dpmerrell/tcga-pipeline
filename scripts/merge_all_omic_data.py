@@ -34,21 +34,37 @@ def initialize_output(output_path, all_patients, all_ctypes, features):
 
     f_out = h5py.File(output_path, 'w')
 
-    # Create the 'index' group in the HDF file
-    index = f_out.create_dataset("features", shape=(len(features),),
+    # OMIC DATA GROUP
+    index = f_out.create_dataset("omic_data/features", shape=(len(features),),
                                  dtype=h5py.string_dtype('utf-8'))
     index[:] = features
 
-    dataset = f_out.create_dataset("data", shape=(len(features), len(all_patients)))
+    dataset = f_out.create_dataset("omic_data/data", shape=(len(features), len(all_patients)))
     dataset[:,:] = np.nan
 
-    columns = f_out.create_dataset("instances", shape=(len(all_patients),),
+    columns = f_out.create_dataset("omic_data/instances", shape=(len(all_patients),),
                                    dtype=h5py.string_dtype('utf-8'))
     columns[:] = all_patients
 
-    ctypes = f_out.create_dataset("cancer_types", shape=(len(all_ctypes),),
+    ctypes = f_out.create_dataset("omic_data/cancer_types", shape=(len(all_ctypes),),
                                   dtype=h5py.string_dtype('utf-8'))
     ctypes[:] = all_ctypes
+
+    # BARCODE GROUP
+    omic_types = [str(feat).split("_")[-1] for feat in features]
+    unique_omic_types = sorted(set(omic_types)) 
+
+    barcodes = f_out.create_dataset("barcodes/data", shape=(len(unique_omic_types), len(all_patients)),
+                                    dtype=h5py.string_dtype('utf-8'))
+    barcodes[:,:] = ""
+    
+    barcode_columns = f_out.create_dataset("barcodes/instances", shape=(len(all_patients),),
+                                           dtype=h5py.string_dtype('utf-8'))
+    barcode_columns[:] = all_patients
+    
+    barcode_index = f_out.create_dataset("barcodes/features", shape=(len(unique_omic_types),),
+                                    dtype=h5py.string_dtype('utf-8'))
+    barcode_index[:] = unique_omic_types
 
     return f_out
 
@@ -94,8 +110,13 @@ def add_dataset(input_path, patient_to_col, f_out, leading, lagging):
         out_column_chunks = compute_chunks(in_out_idx)
         for chunk in out_column_chunks:
             mapped_chunk = [out_in_idx[out_idx] for out_idx in range(chunk[0],chunk[1]+1)]
-            f_out["data"][lagging:leading, chunk[0]:chunk[1]+1] = new_data[:,mapped_chunk]
-    
+            f_out["omic_data/data"][lagging:leading, chunk[0]:chunk[1]+1] = new_data[:,mapped_chunk]
+   
+        barcode_omics = f_out["barcodes/features"][:].astype(str)
+        omic_type = str(f_in["index"][0]).split("_")[-1] 
+        barcode_omic_row = np.argwhere(barcode_omics == omic_type)[0][0]
+        f_out["barcodes/data"][barcode_omic_row, in_out_idx] = f_in["barcodes"][:]
+
     # Update the lagging row index
     lagging = leading
 

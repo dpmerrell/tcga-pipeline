@@ -106,10 +106,10 @@ rule merge_default_omic_data:
         "python {input.script} {wildcards.omic_type} {output} --csv-files {input.csv_files} --cancer-types {params.ctypes}"
 
 
-MRNASEQ_BARCODE_CTYPES = get_cancer_types({"omic_type": "mRNAseq_Preprocess"})
+BARCODE_CTYPES = sorted(set(get_cancer_types({"omic_type": "mRNAseq_Preprocess"})).union(get_cancer_types({"omic_type": "Methylation_Preprocess"})))
 rule merge_restore_barcode_data:
     input:
-        restored=expand("temp/restore_barcode/{ctype}_{{omic_type}}.tsv", ctype=MRNASEQ_BARCODE_CTYPES),
+        restored=expand("temp/restore_barcode/{ctype}_{{omic_type}}.tsv", ctype=BARCODE_CTYPES),
         script=os.path.join("scripts", "merge_across_ctypes.py")
     params:
         ctypes=get_cancer_types
@@ -120,21 +120,28 @@ rule merge_restore_barcode_data:
 
 
 
-def get_mrnaseq_csv_file(wc):
-    return OMIC_CSVS[wc["ctype"]]["mRNAseq_Preprocess"]
+def get_omic_csv_file(wc):
+    return OMIC_CSVS[wc["ctype"]][wc["omic_type"]]
 
-def get_barcoded_mrnaseq_file(wc):
-    return OMIC_CSVS[wc["ctype"]]["Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data"]
+def get_barcode_file(wc):
+    return OMIC_CSVS[wc["ctype"]][config["barcode_files"][wc["omic_type"]][0]]
 
-rule restore_mrnaseq_barcodes:
+def get_barcode_backup_file(wc):
+    if wc["ctype"] in config["barcode_needs_backup"][wc["omic_type"]]:
+        return OMIC_CSVS[wc["ctype"]][config["barcode_files"][wc["omic_type"]][1]]
+    else:
+        return [] 
+
+rule restore_barcodes:
     input:
         script=os.path.join("scripts", "restore_barcodes.py"),
-        mrnaseq_tsv=get_mrnaseq_csv_file,
-        barcoded_tsv=get_barcoded_mrnaseq_file
+        data_tsv=get_omic_csv_file,
+        barcoded_tsv=get_barcode_file,
+        barcode_backup_tsv=get_barcode_backup_file
     output:
-        "temp/restore_barcode/{ctype}_mRNAseq_Preprocess.tsv"
+        "temp/restore_barcode/{ctype,[A-Z]+}_{omic_type}.tsv"
     shell:
-        "python {input.script} {input.mrnaseq_tsv} {input.barcoded_tsv} {output}"
+        "python {input.script} {input.data_tsv} {input.barcoded_tsv} {output} {input.barcode_backup_tsv}"
 
 
 def get_methylation_csv_file(wc):
@@ -214,6 +221,8 @@ rule download_analyses:
         os.path.join("analyses__"+TIMESTAMP,
 	             "{cancer_type}", TIMESTAMP_ABBR,
                      "gdac.broadinstitute.org_{cancer_type}-{tumor_type,[A-Z]+}.{analysis_id}.Level_4.{TIMESTAMP_ABBR}00.0.0.tar.gz")
+    resources:
+        download=1
     shell:
         "./{input} -b -tasks {wildcards.analysis_id} analyses {TIMESTAMP} {wildcards.cancer_type}"
 

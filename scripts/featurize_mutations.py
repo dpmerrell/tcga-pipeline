@@ -21,8 +21,21 @@ def get_all_maf_files(manifest_path):
 
 
 def get_barcode(file_path):
-    fname = path.basename(file_path)
-    return fname.split(".")[0]
+    with open(file_path, "r") as f:
+        # Get the third line
+        for _ in range(4):
+            ln = f.readline()
+        # Search the third line for the barcode column
+        idx = 0
+        for colname in ln.split("\t"):
+            if colname.strip() == "Tumor_Sample_Barcode":
+                break
+            idx += 1
+        # Get the fourth line
+        ln = f.readline().split("\t")
+        
+    barcode = ln[idx]
+    return barcode
 
 
 def sanitize(score_str):

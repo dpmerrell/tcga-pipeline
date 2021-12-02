@@ -13,10 +13,6 @@ cancer_types: ["ACC", "CESC", "HNSC",
                "THYM", "UVM", "BRCA", "COAD", "ESCA", 
                "LAML", "LUAD", "OV", "PRAD", 
                "SKCM", "TGCT", "UCEC"]
-               #"COADREAD",
-               #"STES", 
-               #"GBMLGG", 
-               #"KIPAN", 
 
 
 # These flags identify nodes in the 
@@ -27,14 +23,22 @@ data_types:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Methylation_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.meth.by_mean.data.txt"
-        #workflow: "methylation_restore_barcode"
-        workflow: "default"
+        workflow: "restore_barcode"
+    Merge_methylation__humanmethylation450__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data:
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Merge_methylation__humanmethylation450__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data.Level_3.{timestamp_abbr}00.0.0" 
+        file_template: "{cancer_type}.methylation__humanmethylation450__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data.data.txt"
+        workflow: "unused"
+    Merge_methylation__humanmethylation27__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data:
+        run_type: "stddata"
+        zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Merge_methylation__humanmethylation27__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data.Level_3.{timestamp_abbr}00.0.0" 
+        file_template: "{cancer_type}.methylation__humanmethylation27__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data.data.txt"
+        workflow: "unused"
     mRNAseq_Preprocess:           # mRNA-seq data
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.mRNAseq_Preprocess.Level_3.{timestamp_abbr}00.0.0"
         file_template: "{cancer_type}.uncv2.mRNAseq_RSEM_normalized_log2.txt"
-        workflow: "mrnaseq_restore_barcode"
-        #workflow: "default"
+        workflow: "restore_barcode"
     Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.{timestamp_abbr}00.0.0"
@@ -43,7 +47,7 @@ data_types:
     Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data:
         run_type: "stddata"
         zip_template: "stddata__{timestamp}/{cancer_type}/{timestamp_abbr}/gdac.broadinstitute.org_{cancer_type}.Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.{timestamp_abbr}00.0.0"
-        file_template: "{cancer_type}.rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt"
+        file_template: "{cancer_type}.rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt"
         workflow: "unused"
     RPPA_AnnotateWithGene:        # RPPA proteomic data
         run_type: "stddata"
@@ -86,6 +90,20 @@ extra_files:
     SKCM:
         CopyNumber_Gistic2: "analyses__{timestamp}/SKCM/{timestamp_abbr}/gdac.broadinstitute.org_SKCM-TM.CopyNumber_Gistic2.Level_4.{timestamp_abbr}00.0.0/all_data_by_genes.txt"
         MutSigNozzleReport2CV: "analyses__{timestamp}/SKCM/{timestamp_abbr}/gdac.broadinstitute.org_SKCM-TM.MutSigNozzleReport2CV.Level_4.{timestamp_abbr}00.0.0/sig_genes.txt"
+
+
+barcode_files:
+    mRNAseq_Preprocess:
+        - "Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data"
+        - "Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data"
+    Methylation_Preprocess:
+        - "Merge_methylation__humanmethylation450__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data"
+        - "Merge_methylation__humanmethylation27__jhu_usc_edu__Level_3__within_bioassay_data_set_function__data"
+
+
+barcode_needs_backup:
+    mRNAseq_Preprocess: ["COAD", "READ", "UCEC"]
+    Methylation_Preprocess: ["COAD", "LAML", "READ", "UCEC", "OV", "GBM"]
 
 
 clinical_data_types:

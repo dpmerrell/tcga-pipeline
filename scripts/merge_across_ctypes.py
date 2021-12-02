@@ -72,6 +72,7 @@ def read_mRNAseq_data(data_filename):
 
     primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
     df = df.loc[primary_tumor_idx, :]
+    barcodes = list(df.index)
 
     assert len(df["patient"].unique()) == df.shape[0]
     df.set_index(["patient"], inplace=True)
@@ -82,7 +83,7 @@ def read_mRNAseq_data(data_filename):
     srt_cols = sorted(df.columns)
     df = df[srt_cols]
     
-    return df
+    return df, barcodes
 
 
 def read_RPPA_data(data_filename):
@@ -111,6 +112,7 @@ def read_RPPA_data(data_filename):
 
     primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
     df = df.loc[primary_tumor_idx, :]
+    barcodes = list(df.index)
 
     assert len(df["patient"].unique()) == df.shape[0]
     df.set_index(["patient"], inplace=True)
@@ -120,7 +122,7 @@ def read_RPPA_data(data_filename):
     srt_cols = sorted(df.columns)
     df = df[srt_cols]
 
-    return df
+    return df, barcodes
 
 
 def read_Methylation_data(data_filename):
@@ -149,6 +151,7 @@ def read_Methylation_data(data_filename):
     # Keep only records for primary tumor samples
     primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
     df = df.loc[primary_tumor_idx, :]
+    barcodes = list(df.index)
 
     assert len(df["patient"].unique()) == df.shape[0]
     df.set_index(["patient"], inplace=True)
@@ -157,7 +160,7 @@ def read_Methylation_data(data_filename):
     df = df.transpose() 
     srt_cols = sorted(df.columns)
     df = df[srt_cols]
-    return df
+    return df, barcodes
 
 
 def read_CopyNumber_data(data_filename):
@@ -187,6 +190,7 @@ def read_CopyNumber_data(data_filename):
     # Keep only records for primary tumor samples
     primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
     df = df.loc[primary_tumor_idx, :]
+    barcodes = list(df.index)
 
     assert len(df["patient"].unique()) == df.shape[0]
     df.set_index(["patient"], inplace=True)
@@ -195,7 +199,7 @@ def read_CopyNumber_data(data_filename):
     df = df.transpose()
     srt_cols = sorted(df.columns)
     df = df[srt_cols]
-    return df
+    return df, barcodes
 
 
 def read_maf_data(data_filename):
@@ -211,47 +215,51 @@ def read_maf_data(data_filename):
 
     df = df.loc[:,primary_tumor_cols]
     patient_ids = patient_ids[primary_tumor_cols]
+    barcodes = list(df.columns)
     df.columns = patient_ids
 
     df.index = df.index.map(sgi_func)
 
-    return df
+    return df, barcodes
 
 
 
 def read_data(data_filename, data_type_str):
 
     if data_type_str=="mRNAseq_Preprocess":
-        df = read_mRNAseq_data(data_filename)
+        df, barcodes = read_mRNAseq_data(data_filename)
     elif data_type_str == "RPPA_AnnotateWithGene":
-        df = read_RPPA_data(data_filename)
+        df, barcodes = read_RPPA_data(data_filename)
     elif data_type_str == "Methylation_Preprocess":
-        df = read_Methylation_data(data_filename)
+        df, barcodes = read_Methylation_data(data_filename)
     elif data_type_str == "CopyNumber_Gistic2":
-        df = read_CopyNumber_data(data_filename)
+        df, barcodes = read_CopyNumber_data(data_filename)
     elif data_type_str == "Mutation_Packager_Oncotated_Calls":
-        df = read_maf_data(data_filename)
+        df, barcodes = read_maf_data(data_filename)
     else:
         raise ValueError
 
-    return df
+    return df, barcodes
 
 
 def read_all_data(all_data_files, all_cancer_types, data_type):
 
     ctype_ls = []
     combined = pd.DataFrame()
+    barcode_ls = []
 
     for data_file, cancer_type in zip(all_data_files, all_cancer_types):
-        new_df = read_data(data_file, data_type)
+        new_df, new_barcodes = read_data(data_file, data_type)
         ctype_ls += [cancer_type]*new_df.shape[1]
+        barcode_ls += new_barcodes
         combined = pd.concat((combined, new_df), axis=1)
 
     
-    return combined, ctype_ls
+    return combined, ctype_ls, barcode_ls
 
 
-def write_hdf(dataframe, ctype_ls, filename):
+
+def write_hdf(dataframe, ctype_ls, barcode_ls, filename):
 
     with h5py.File(filename, "w") as f:
 
@@ -270,6 +278,9 @@ def write_hdf(dataframe, ctype_ls, filename):
                                   dtype=h5py.string_dtype('utf-8'))
         ctypes[:] = ctype_ls
 
+        barcodes = f.create_dataset("barcodes", len(barcode_ls),
+                                    dtype=h5py.string_dtype('utf-8'))
+        barcodes[:] = barcode_ls
 
     return
 
@@ -292,10 +303,10 @@ if __name__=="__main__":
     args = parser.parse_args()
 
 
-    df, ctype_ls = read_all_data(args.csv_files, 
-                                 args.cancer_types, 
-                                 args.data_type)
+    df, ctype_ls, barcode_ls = read_all_data(args.csv_files, 
+                                             args.cancer_types, 
+                                             args.data_type)
 
-    write_hdf(df, ctype_ls, args.output_hdf)
+    write_hdf(df, ctype_ls, barcode_ls, args.output_hdf)
 
 
