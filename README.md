@@ -35,37 +35,30 @@ If you really want to run the code in this repo for yourself, then take the foll
 
 ## Structure of the data
 
-![tcga data schematic](tcga-data.png)
+![tcga data schematic](tcga_data.png)
 
 ### Multi-omic data 
 
 This workflow produces an HDF file of multi-omic data, with the structure illustrated above.
 
-Each cancer type has its own group in the HDF file.
-For each cancer type group, there are two tables:
+* `/omic_data`. HDF5 group containing multi-omic data, along with row and column information.
+* `/barcodes`. HDF5 group containing full TCGA barcodes for data samples. I.e., it gives the barcode for each sample and and each omic type (when it exists). Full barcodes are potentially useful for modeling batch effects. 
 
-* `/CANCERTYPE/data`. The table of multi-omic numeric values. Floating point dtype.
-* `/CANCERTYPE/columns`. The list of patients. corresponds to columns in `data`. UTF-8 string dtype.
+Omic data feature names take the following form:
 
-There is also a root-level table `/index` that gives the names of the multi-omic features.
-Feature names take the following convention:
+`GENE_DATATYPE`
 
-`GENE_DATATYPE_OTHER-IDENTIFIERS`
-
-Possible values for `DATATYPE` include `CNV`, `METH`, `MRNA`, `PROT`.
+Possible values for `DATATYPE` include `mutation`, `cnv`, `methylation`, `mrnaseq`, and `rppa`.
  
-There are many missing values -- not all measurements were taken for all patients.
+There are many missing values, indicated by `NaN`s -- not all measurements were taken for all patients.
+
+
+
 
 ### Clinical data
 
 This workflow also produces an HDF file of clinical data. 
-It has a similar structure to the multi-omic data.
-
-For each cancer type there are three tables:
-
-* `/CANCERTYPE/data`. The table of clinical data. **UTF-8 string dtype**.
-* `/CANCERTYPE/columns`. The list of patients. corresponds to columns in `data`. UTF-8 string dtype.
-* `/CANCERTYPE/index`. The list of clinical data features. corresponds to rows in `dataa. UTF-8 string dtype.
+Its structure is also shown in the figure.
 
 ## Some provenance details
 
@@ -73,10 +66,14 @@ We download data from particular points in the [Broad Intitute GDAC Firehose pip
 
 * Copy number variation
     - `CopyNumber_Gistic2` node in [this DAG](http://gdac.broadinstitute.org/Analyses-DAG.html)
+* Somatic Mutation annotations
+    - `Mutation_Packager_Oncotated_Calls` node in [this dag](http://gdac.broadinstitute.org/stddata-DAG.html)
 * Methylation
     - `Methylation_Preprocess` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
+    - We recover the barcodes for methylation samples by inspecting the corresponding entries in "humanmethylation450" files whenever they exist, and "humanmethylation27" thereafter.
 * Gene expression
     - `mRNAseq_Preprocess` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
+    - We recover the barcodes for RNAseq samples by inspecting the corresponding entries in "illuminahiseq" files whenever they exist, and "illuminaga" thereafter.
 * Reverse Phase Protein Array
     - `RPPA_AnnotateWithGene` node in [this DAG](http://gdac.broadinstitute.org/stddata-DAG.html)
 * Clinical Data
