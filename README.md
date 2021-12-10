@@ -27,10 +27,10 @@ If you really want to run the code in this repo for yourself, then take the foll
 1. Clone the repository: `git clone git@github.com:dpmerrell/tcga-pipeline`.
 2. Set up your python environment. Install the dependencies: `pip install -r requirements.txt`.
    (I recommend doing this in a virtual environment.)
-3. Make sure you have plenty of disk space. The downloaded, unzipped, and partially processed data will take a footprint of **280GB on disk**.
-4. Make sure you have plenty of time. The downloads take a while -- consider running it overnight.
-5. If you're feeling brave, adjust the parameters in the `config.yaml` file.
-6. Run the Snakemake workflow: `snakemake --cores 1`. Using more cores doesn't necessarily buy you any speed for downloading data.
+3. Make sure you have plenty of disk space. The downloaded, unzipped, and partially processed data will take a footprint of **280GB on disk**. (In contrast, the final HDF files take <4GB unzipped.)
+5. Make sure you have plenty of time. The downloads take a while -- consider running it overnight.
+6. If you're feeling brave, adjust the parameters in the `config.yaml` file.
+7. Run the Snakemake workflow: `snakemake --cores 1`. Using more cores doesn't necessarily buy you any speed for downloading data.
 
 
 ## Structure of the data
