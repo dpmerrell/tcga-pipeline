@@ -108,7 +108,6 @@ def read_RPPA_data(data_filename):
 
     df["patient"] = df.index.map(get_patient_id)
     df["sample_type"] = df.index.map(get_sample_type)
-    print("RPPA SAMPLE TYPES:", df["sample_type"])
 
     primary_tumor_idx = df["sample_type"].map(lambda x: x in PRIMARY_TUMOR_TYPES)
     df = df.loc[primary_tumor_idx, :]

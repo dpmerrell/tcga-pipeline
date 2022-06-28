@@ -14,7 +14,7 @@ def get_patients_and_features(hdf_path_list):
 
         with h5py.File(hdf_path, "r") as f:
             
-            features += list(f["index"][:])
+            features += list(f["index"][:].astype(str))
             new_patients = f["columns"][:]
             new_ctypes = f["cancer_types"][:]
 
@@ -52,7 +52,7 @@ def initialize_output(output_path, all_patients, all_ctypes, features):
 
     # BARCODE GROUP
     omic_types = [str(feat).split("_")[-1] for feat in features]
-    unique_omic_types = sorted(set(omic_types)) 
+    unique_omic_types = sorted(set(omic_types))
 
     barcodes = f_out.create_dataset("barcodes/data", shape=(len(unique_omic_types), len(all_patients)),
                                     dtype=h5py.string_dtype('utf-8'))
@@ -113,7 +113,7 @@ def add_dataset(input_path, patient_to_col, f_out, leading, lagging):
             f_out["omic_data/data"][lagging:leading, chunk[0]:chunk[1]+1] = new_data[:,mapped_chunk]
    
         barcode_omics = f_out["barcodes/features"][:].astype(str)
-        omic_type = str(f_in["index"][0]).split("_")[-1] 
+        omic_type = f_in["index"][:1].astype(str)[0].split("_")[-1]
         barcode_omic_row = np.argwhere(barcode_omics == omic_type)[0][0]
         f_out["barcodes/data"][barcode_omic_row, in_out_idx] = f_in["barcodes"][:]
 
